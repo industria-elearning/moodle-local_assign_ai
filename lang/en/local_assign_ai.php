@@ -26,3 +26,34 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['pluginname'] = 'Assignment AI';
+
+
+$string['statusapprove'] = 'Aprobado';
+$string['statusrejected'] = 'Rechazado';
+$string['statuspending'] = 'Pendiente';
+$string['nostatus'] = 'Sin retroalimentación';
+$string['viewdetails'] = 'Ver detalles';
+
+$string['pluginname'] = 'Revisión con IA';
+$string['reviewwithai'] = 'Revisión con IA';
+$string['details'] = 'Detalles';
+$string['submitted'] = 'Entregado';
+
+$string['submission_submitted'] = 'Enviado';
+$string['submission_draft'] = 'Borrador';
+$string['submission_new'] = 'Nuevo';
+$string['submission_none'] = 'Sin entrega';
+
+$string['reviewall'] = 'Revisar todos';
+$string['review'] = 'Revisar';
+$string['ver'] = 'Ver';
+$string['viewdetails'] = 'Ver detalles';
+$string['fullname'] = 'Nombre completo';
+$string['email'] = 'Correo electrónico';
+$string['status'] = 'Estado';
+$string['feedbackcomments'] = 'Comentarios';
+$string['aistatus'] = 'Estado IA';
+$string['statusapprove'] = 'Aprobado';
+$string['statusrejected'] = 'Rechazado';
+$string['statuspending'] = 'Pendiente';
+$string['nostatus'] = 'Sin retroalimentación';
