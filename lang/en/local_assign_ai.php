@@ -25,35 +25,21 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['actions'] = 'Actions';
+$string['aistatus'] = 'AI Status';
+$string['email'] = 'Email';
+$string['feedbackcomments'] = 'Comments';
+$string['fullname'] = 'Full name';
+$string['nostatus'] = 'No feedback';
 $string['pluginname'] = 'Assignment AI';
-
-
-$string['statusapprove'] = 'Aprobado';
-$string['statusrejected'] = 'Rechazado';
-$string['statuspending'] = 'Pendiente';
-$string['nostatus'] = 'Sin retroalimentación';
-$string['viewdetails'] = 'Ver detalles';
-
-$string['pluginname'] = 'Revisión con IA';
-$string['reviewwithai'] = 'Revisión con IA';
-$string['details'] = 'Detalles';
-$string['submitted'] = 'Entregado';
-
-$string['submission_submitted'] = 'Enviado';
-$string['submission_draft'] = 'Borrador';
-$string['submission_new'] = 'Nuevo';
-$string['submission_none'] = 'Sin entrega';
-
-$string['reviewall'] = 'Revisar todos';
-$string['review'] = 'Revisar';
-$string['ver'] = 'Ver';
-$string['viewdetails'] = 'Ver detalles';
-$string['fullname'] = 'Nombre completo';
-$string['email'] = 'Correo electrónico';
-$string['status'] = 'Estado';
-$string['feedbackcomments'] = 'Comentarios';
-$string['aistatus'] = 'Estado IA';
-$string['statusapprove'] = 'Aprobado';
-$string['statusrejected'] = 'Rechazado';
-$string['statuspending'] = 'Pendiente';
-$string['nostatus'] = 'Sin retroalimentación';
+$string['qualify'] = 'Qualify';
+$string['review'] = 'Review';
+$string['reviewall'] = 'Review All';
+$string['reviewwithai'] = 'Review With AI';
+$string['status'] = 'Status';
+$string['statusapprove'] = 'Approve';
+$string['statuspending'] = 'Pending';
+$string['submission_new'] = 'New';
+$string['submission_none'] = 'No submission';
+$string['submission_submitted'] = 'Submitted';
+$string['viewdetails'] = 'View details';

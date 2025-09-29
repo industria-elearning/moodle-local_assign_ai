@@ -17,8 +17,7 @@
 /**
  * Configuración del plugin Forum AI.
  *
- * @package    local_forum_ai
- * @category   admin
+ * @package     local_assign_ai
  * @copyright  2025 Piero Llanos
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */

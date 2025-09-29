@@ -2,8 +2,6 @@ import ModalFactory from 'core/modal_factory';
 import ModalEvents from 'core/modal_events';
 import Ajax from 'core/ajax';
 import Notification from 'core/notification';
-
-// 👉 Tiny en Moodle
 import { getTinyMCE } from 'editor_tiny/loader';
 import * as TinyEditor from 'editor_tiny/editor';
 
@@ -24,7 +22,6 @@ export const init = () => {
             <div class="mt-2">
               <button class="btn btn-success save-ai" data-token="${token}">Guardar</button>
               <button class="btn btn-primary approve-ai" data-token="${token}">Guardar y Aprobar</button>
-              <button class="btn btn-danger reject-ai" data-token="${token}">Rechazar</button>
             </div>
           `,
                     large: true,
@@ -35,7 +32,6 @@ export const init = () => {
                 const root = modal.getRoot();
                 const textarea = root.find('#airesponse-edit')[0];
 
-                // 🔹 Inicializa Tiny en el textarea (con fallback si falla)
                 let tinymce;
                 try {
                     tinymce = await getTinyMCE();
@@ -94,7 +90,7 @@ export const init = () => {
                         .fail(Notification.exception);
                 });
 
-                // 🧹 Limpieza: destruye la instancia al cerrar el modal
+                // Destruye la instancia al cerrar el modal
                 root.on(ModalEvents.hidden, () => {
                     const inst = tinymce && tinymce.get(textarea.id);
                     if (inst) { inst.remove(); }

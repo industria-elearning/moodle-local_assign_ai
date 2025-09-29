@@ -25,4 +25,21 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['actions'] = 'Acciones';
+$string['aistatus'] = 'Estado IA';
+$string['email'] = 'Correo electrónico';
+$string['feedbackcomments'] = 'Comentarios';
+$string['fullname'] = 'Nombre completo';
+$string['nostatus'] = 'Sin retroalimentación';
 $string['pluginname'] = 'Assignment AI';
+$string['qualify'] = 'Calificar';
+$string['review'] = 'Revisar';
+$string['reviewall'] = 'Revisar todos';
+$string['reviewwithai'] = 'Revisión con IA';
+$string['status'] = 'Estado';
+$string['statusapprove'] = 'Aprobado';
+$string['statuspending'] = 'Pendiente';
+$string['submission_new'] = 'Nuevo';
+$string['submission_none'] = 'Sin entrega';
+$string['submission_submitted'] = 'Enviado';
+$string['viewdetails'] = 'Ver detalles';

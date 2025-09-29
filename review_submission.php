@@ -1,7 +1,30 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Review submission processor for local_assign_ai.
+ *
+ * @package     local_assign_ai
+ * @copyright   2025 Piero Llanos <piero@datacurso.com>
+ * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__.'/../../config.php');
 require_once($CFG->dirroot.'/mod/assign/locallib.php');
-require_once(__DIR__.'/locallib.php'); // helper para la rúbrica
+require_once(__DIR__.'/locallib.php');
 
 use local_assign_ai\api\client;
 
@@ -32,13 +55,12 @@ if ($all) {
     $token = process_submission_ai($assign, $course, $student, $DB);
 }
 
-// 🔹 Redirección
 if ($goto === 'grader' && $userid && $token) {
     redirect(new moodle_url('/mod/assign/view.php', [
         'id' => $cmid,
         'action' => 'grader',
         'userid' => $userid,
-        'aitoken' => $token // el js inyecta el mensaje
+        'aitoken' => $token,
     ]));
 } else {
     redirect(new moodle_url('/local/assign_ai/review.php', ['id' => $cmid]));
@@ -47,18 +69,21 @@ if ($goto === 'grader' && $userid && $token) {
 /**
  * Procesa la entrega de un usuario con IA y guarda como pendiente en local_assign_ai_pending.
  *
- * @return string|null El token generado para la retroalimentación pendiente, o null si no hay envío válido
+ * @package    local_assign_ai
+ * @param assign $assign Objeto asignación.
+ * @param stdClass $course Curso de Moodle.
+ * @param stdClass $student Usuario estudiante.
+ * @param moodle_database $DB Base de datos global.
+ * @return string|null El token generado para la retroalimentación pendiente, o null si no hay envío válido.
  */
 function process_submission_ai(assign $assign, $course, $student, $DB) {
     global $CFG;
 
-    // Obtener entrega
     $submission = $assign->get_user_submission($student->id, false);
     if (!$submission || $submission->status !== 'submitted') {
         return null;
     }
 
-    // Obtener archivo de la entrega
     $fs = get_file_storage();
     $files = $fs->get_area_files(
         $assign->get_context()->id,
@@ -66,23 +91,20 @@ function process_submission_ai(assign $assign, $course, $student, $DB) {
         'submission_files',
         $submission->id,
         'id',
-        false
+        false,
     );
 
     if (empty($files)) {
         return null;
     }
 
-    // Tomar el primer archivo válido
     $file = reset($files);
     $filepath = $CFG->dataroot . '/temp/assign_ai/' . $file->get_filename();
     @mkdir(dirname($filepath), 0777, true);
     $file->copy_content_to($filepath);
 
-    // 🔹 Mock de conversión a texto
     $textcontent = "Contenido convertido del archivo: " . $file->get_filename();
 
-    // Construir JSON
     $assignmentdata = [
         'id' => $assign->get_course_module()->id,
         'title' => $assign->get_instance()->name,
@@ -97,34 +119,29 @@ function process_submission_ai(assign $assign, $course, $student, $DB) {
         'student' => [
             'id' => $student->id,
             'name' => fullname($student),
-            'submission_assign' => $textcontent
-        ]
+            'submission_assign' => $textcontent,
+        ],
     ];
 
-    // IA mock
     $data = client::send_to_ai($payload);
 
-    // Buscar si ya existe
     $existing = $DB->get_record('local_assign_ai_pending', [
         'courseid' => $course->id,
         'assignmentid' => $assign->get_course_module()->id,
-        'userid' => $student->id
+        'userid' => $student->id,
     ]);
 
     if ($existing) {
-        // 🔹 Si está aprobado o rechazado, respetar su estado y token
         if ($existing->status === 'approve' || $existing->status === 'rejected') {
             return $existing->approval_token;
         }
 
-        // 🔹 Si está pendiente, actualizar mensaje y mantener token
         $existing->message = $data['reply'];
         $existing->timemodified = time();
         $DB->update_record('local_assign_ai_pending', $existing);
         return $existing->approval_token;
 
     } else {
-        // 🔹 Si no existe, crear nuevo en estado pending
         $token = bin2hex(random_bytes(16));
         $record = (object)[
             'courseid'      => $course->id,
@@ -133,9 +150,9 @@ function process_submission_ai(assign $assign, $course, $student, $DB) {
             'userid'        => $student->id,
             'message'       => $data['reply'],
             'status'        => 'pending',
-            'approval_token'=> $token,
+            'approval_token' => $token,
             'timecreated'   => time(),
-            'timemodified'  => time()
+            'timemodified'  => time(),
         ];
         $DB->insert_record('local_assign_ai_pending', $record);
         return $token;

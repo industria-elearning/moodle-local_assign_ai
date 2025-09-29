@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Local library functions for local_assign_ai.
+ *
+ * @package     local_assign_ai
+ * @copyright   2025 Piero Llanos <piero@datacurso.com>
+ * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/grade/grading/lib.php');
@@ -6,23 +29,23 @@ require_once($CFG->dirroot . '/grade/grading/lib.php');
 /**
  * Convierte la rúbrica de una tarea en JSON simplificado.
  *
- * @param assign $assign
- * @return array|null
+ * @param assign $assign The assignment instance.
+ * @return array|null Simplified rubric array or null if no rubric is active.
+ * @package local_assign_ai
  */
 function build_rubric_json(assign $assign) {
     global $DB;
 
     $context = $assign->get_context();
 
-    // Inicializar grading manager
+    // Inicializar grading manager.
     $gradingmanager = get_grading_manager($context, 'mod_assign', 'submissions');
     $method = $gradingmanager->get_active_method();
 
     if ($method !== 'rubric') {
-        return null; // No hay rúbrica activa
+        return null;
     }
 
-    // Cargar la rúbrica
     $controller = $gradingmanager->get_controller('rubric');
     if (!$controller) {
         return null;
@@ -36,19 +59,19 @@ function build_rubric_json(assign $assign) {
     $rubric = [
         'title' => $definition->name ?? 'Rúbrica',
         'description' => $definition->description ?? '',
-        'criteria' => []
+        'criteria' => [],
     ];
 
     foreach ($definition->rubric_criteria as $criterionid => $criterion) {
         $crit = [
             'criterion' => $criterion['description'],
-            'levels' => []
+            'levels' => [],
         ];
 
         foreach ($criterion['levels'] as $levelid => $level) {
             $crit['levels'][] = [
                 'points' => (float) $level['score'],
-                'description' => $level['definition']
+                'description' => $level['definition'],
             ];
         }
 

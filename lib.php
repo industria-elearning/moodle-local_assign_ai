@@ -1,27 +1,34 @@
 <?php
-defined('MOODLE_INTERNAL') || die();
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Extiende la navegación de las tareas para mostrar el botón "Revisión con IA".
+ * Library functions for local_assign_ai.
+ *
+ * @package     local_assign_ai
+ * @copyright   2025 Piero Llanos <piero@datacurso.com>
+ * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-// function local_assign_ai_extend_navigation_module($navigation, $cm) {
-//     global $PAGE;
 
-//     if ($cm->modname === 'assign' && optional_param('action', '', PARAM_ALPHA) === 'grading') {
-//         $url = new moodle_url('/local/assign_ai/review.php', ['id' => $cm->id]);
-//         $navigation->add(
-//             get_string('reviewwithai', 'local_assign_ai'),
-//             $url,
-//             navigation_node::TYPE_CUSTOM,
-//             null,
-//             null,
-//             new pix_icon('i/ai', '') // si no tienes icono, se puede omitir
-//         );
-//     }
-// }
 
 /**
  * Extiende la navegación de las tareas para mostrar el botón "Revisión con IA".
+ *
+ * @param settings_navigation $nav     The settings navigation object.
+ * @param context             $context The current context.
+ * @package local_assign_ai
  */
 function local_assign_ai_extend_settings_navigation(settings_navigation $nav, context $context) {
     global $PAGE, $DB;
@@ -63,7 +70,7 @@ function local_assign_ai_before_footer() {
     $action = optional_param('action', '', PARAM_ALPHA);
     $aitoken = optional_param('aitoken', '', PARAM_ALPHANUM);
 
-    // Solo cargar en grader con token IA
+    // Solo cargar en grader con token IA.
     if ($cmid && $action === 'grader' && !empty($aitoken)) {
         $PAGE->requires->js_call_amd('local_assign_ai/inject_ai', 'init', [$aitoken]);
     }
