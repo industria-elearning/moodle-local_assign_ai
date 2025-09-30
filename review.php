@@ -51,6 +51,23 @@ $PAGE->activityheader->disable();
 
 echo $OUTPUT->header();
 
+// Obtener lista de usuarios matriculados en el curso con capacidad de entregar.
+$students = get_enrolled_users($context, 'mod/assign:submit');
+
+// Verificar si todos los estudiantes tienen feedback pendiente o aprobado.
+$allblocked = true;
+foreach ($students as $student) {
+    $record = $DB->get_record('local_assign_ai_pending', [
+        'courseid' => $course->id,
+        'assignmentid' => $cm->id,
+        'userid' => $student->id,
+    ]);
+    if (!$record || $record->status === 'rejected') {
+        $allblocked = false;
+        break;
+    }
+}
+
 // Título + botón revisar todos en la misma fila.
 echo html_writer::start_div('d-flex justify-content-between align-items-center mb-3');
 echo $OUTPUT->heading(get_string('reviewwithai', 'local_assign_ai'), 2, 'mb-0');
@@ -59,15 +76,22 @@ $reviewallurl = new moodle_url('/local/assign_ai/review_submission.php', [
     'id' => $cmid,
     'all' => 1,
 ]);
-echo html_writer::link(
-    $reviewallurl,
-    get_string('reviewall', 'local_assign_ai'),
-    ['class' => 'btn btn-warning']
-);
-echo html_writer::end_div();
 
-// Obtener lista de usuarios matriculados en el curso con capacidad de entregar.
-$students = get_enrolled_users($context, 'mod/assign:submit');
+if ($allblocked) {
+    // Botón bloqueado.
+    echo html_writer::tag('button', get_string('reviewall', 'local_assign_ai'), [
+        'class' => 'btn btn-warning',
+        'disabled' => 'disabled',
+    ]);
+} else {
+    // Botón activo.
+    echo html_writer::link(
+        $reviewallurl,
+        get_string('reviewall', 'local_assign_ai'),
+        ['class' => 'btn btn-warning']
+    );
+}
+echo html_writer::end_div();
 
 $rows = [];
 
@@ -97,12 +121,10 @@ foreach ($students as $student) {
     $filelinks = '-';
 
     if ($submission && $submission->status === 'submitted') {
-        // Fecha.
         if (!empty($submission->timemodified)) {
             $lastmodified = userdate($submission->timemodified);
         }
 
-        // Archivos enviados.
         $fs = get_file_storage();
         $files = $fs->get_area_files(
             $assign->get_context()->id,
@@ -164,7 +186,7 @@ foreach ($students as $student) {
         );
     }
 
-    // Botón azul → grader.
+    // Botón azul → grader (siempre activo).
     $viewurl = new moodle_url('/local/assign_ai/review_submission.php', [
         'id' => $cmid,
         'userid' => $student->id,
@@ -181,11 +203,20 @@ foreach ($students as $student) {
         'id' => $cmid,
         'userid' => $student->id,
     ]);
-    $reviewbtn = html_writer::link(
-        $reviewurl,
-        get_string('review', 'local_assign_ai'),
-        ['class' => 'btn btn-warning']
-    );
+
+    if ($record && in_array($record->status, ['pending', 'approve'])) {
+        $reviewbtn = html_writer::tag(
+            'button',
+            get_string('review', 'local_assign_ai'),
+            ['class' => 'btn btn-warning', 'disabled' => 'disabled']
+        );
+    } else {
+        $reviewbtn = html_writer::link(
+            $reviewurl,
+            get_string('review', 'local_assign_ai'),
+            ['class' => 'btn btn-warning']
+        );
+    }
 
     $rows[] = [
         'fullname'      => fullname($student),

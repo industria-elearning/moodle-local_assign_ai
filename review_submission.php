@@ -44,24 +44,65 @@ require_capability('local/assign_ai:review', $context);
 $assign = new assign($context, $cm, $course);
 
 $token = null;
+$processedcount = 0;
 
 if ($all) {
     $students = get_enrolled_users($context, 'mod/assign:submit');
     foreach ($students as $student) {
-        $token = process_submission_ai($assign, $course, $student, $DB);
+        $result = process_submission_ai($assign, $course, $student, $DB);
+        if ($result) {
+            $token = $result;
+            $processedcount++;
+        }
     }
+
+    if ($processedcount === 0) {
+        redirect(
+            new moodle_url('/local/assign_ai/review.php', ['id' => $cmid]),
+            get_string('notasksfound', 'local_assign_ai'),
+            null,
+            \core\output\notification::NOTIFY_WARNING
+        );
+    } else {
+        $msg = $processedcount === 1
+            ? get_string('onetaskreviewed', 'local_assign_ai')
+            : get_string('manytasksreviewed', 'local_assign_ai', $processedcount);
+
+        redirect(
+            new moodle_url('/local/assign_ai/review.php', ['id' => $cmid]),
+            $msg,
+            null,
+            \core\output\notification::NOTIFY_SUCCESS
+        );
+    }
+
 } else if ($userid) {
     $student = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
     $token = process_submission_ai($assign, $course, $student, $DB);
+
+    if (!$token) {
+        // Buscar si ya existe feedback previo.
+        $record = $DB->get_record('local_assign_ai_pending', [
+            'courseid' => $course->id,
+            'assignmentid' => $assign->get_course_module()->id,
+            'userid' => $userid,
+        ]);
+        if ($record) {
+            $token = $record->approval_token;
+        }
+    }
 }
 
-if ($goto === 'grader' && $userid && $token) {
-    redirect(new moodle_url('/mod/assign/view.php', [
+if ($goto === 'grader' && $userid) {
+    $params = [
         'id' => $cmid,
         'action' => 'grader',
         'userid' => $userid,
-        'aitoken' => $token,
-    ]));
+    ];
+    if ($token) {
+        $params['aitoken'] = $token;
+    }
+    redirect(new moodle_url('/mod/assign/view.php', $params));
 } else {
     redirect(new moodle_url('/local/assign_ai/review.php', ['id' => $cmid]));
 }
@@ -132,29 +173,23 @@ function process_submission_ai(assign $assign, $course, $student, $DB) {
     ]);
 
     if ($existing) {
-        if ($existing->status === 'approve' || $existing->status === 'rejected') {
+        if ($existing->status === 'approve' || $existing->status === 'rejected' || $existing->status === 'pending') {
             return $existing->approval_token;
         }
-
-        $existing->message = $data['reply'];
-        $existing->timemodified = time();
-        $DB->update_record('local_assign_ai_pending', $existing);
-        return $existing->approval_token;
-
-    } else {
-        $token = bin2hex(random_bytes(16));
-        $record = (object)[
-            'courseid'      => $course->id,
-            'assignmentid'  => $assign->get_course_module()->id,
-            'title'         => $assign->get_instance()->name,
-            'userid'        => $student->id,
-            'message'       => $data['reply'],
-            'status'        => 'pending',
-            'approval_token' => $token,
-            'timecreated'   => time(),
-            'timemodified'  => time(),
-        ];
-        $DB->insert_record('local_assign_ai_pending', $record);
-        return $token;
     }
+
+    $token = bin2hex(random_bytes(16));
+    $record = (object)[
+        'courseid'      => $course->id,
+        'assignmentid'  => $assign->get_course_module()->id,
+        'title'         => $assign->get_instance()->name,
+        'userid'        => $student->id,
+        'message'       => $data['reply'],
+        'status'        => 'pending',
+        'approval_token' => $token,
+        'timecreated'   => time(),
+        'timemodified'  => time(),
+    ];
+    $DB->insert_record('local_assign_ai_pending', $record);
+    return $token;
 }
