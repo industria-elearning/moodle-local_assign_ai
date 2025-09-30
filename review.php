@@ -18,7 +18,7 @@
  * Review page for local_assign_ai.
  *
  * @package     local_assign_ai
- * @copyright   2025 Piero Llanos <piero@datacurso.com>
+ * @copyright   2025 Piero Llanos
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -50,9 +50,11 @@ $PAGE->requires->js_call_amd('local_assign_ai/review', 'init');
 $PAGE->activityheader->disable();
 
 echo $OUTPUT->header();
-echo $OUTPUT->heading(get_string('reviewwithai', 'local_assign_ai'));
 
-// Botón Revisar todos.
+// Título + botón revisar todos en la misma fila.
+echo html_writer::start_div('d-flex justify-content-between align-items-center mb-3');
+echo $OUTPUT->heading(get_string('reviewwithai', 'local_assign_ai'), 2, 'mb-0');
+
 $reviewallurl = new moodle_url('/local/assign_ai/review_submission.php', [
     'id' => $cmid,
     'all' => 1,
@@ -60,26 +62,18 @@ $reviewallurl = new moodle_url('/local/assign_ai/review_submission.php', [
 echo html_writer::link(
     $reviewallurl,
     get_string('reviewall', 'local_assign_ai'),
-    ['class' => 'btn btn-warning mb-3']
+    ['class' => 'btn btn-warning']
 );
+echo html_writer::end_div();
 
 // Obtener lista de usuarios matriculados en el curso con capacidad de entregar.
 $students = get_enrolled_users($context, 'mod/assign:submit');
 
-$table = new html_table();
-$table->head = [
-    get_string('fullname', 'local_assign_ai'),
-    get_string('email', 'local_assign_ai'),
-    get_string('status', 'local_assign_ai'),
-    get_string('feedbackcomments', 'local_assign_ai'),
-    get_string('aistatus', 'local_assign_ai'),
-    get_string('actions', 'local_assign_ai'),
-];
+$rows = [];
 
 foreach ($students as $student) {
-    // Obtener la entrega usando la API.
+    // Estado de la entrega.
     $submission = $assign->get_user_submission($student->id, false);
-
     if ($submission) {
         switch ($submission->status) {
             case 'submitted':
@@ -98,14 +92,45 @@ foreach ($students as $student) {
         $status = get_string('submission_none', 'local_assign_ai');
     }
 
-    // Recuperar retroalimentación del profesor.
-    $grade = $assign->get_user_grade($student->id, true);
-    $feedbacktext = '-';
-    if ($grade && isset($grade->feedbacktext) && !empty($grade->feedbacktext)) {
-        $feedbacktext = $grade->feedbacktext;
+    // Ultima modificación y archivos enviados.
+    $lastmodified = '-';
+    $filelinks = '-';
+
+    if ($submission && $submission->status === 'submitted') {
+        // Fecha.
+        if (!empty($submission->timemodified)) {
+            $lastmodified = userdate($submission->timemodified);
+        }
+
+        // Archivos enviados.
+        $fs = get_file_storage();
+        $files = $fs->get_area_files(
+            $assign->get_context()->id,
+            'assignsubmission_file',
+            'submission_files',
+            $submission->id,
+            'id',
+            false
+        );
+
+        if ($files) {
+            $filelinksarr = [];
+            foreach ($files as $file) {
+                $url = moodle_url::make_pluginfile_url(
+                    $file->get_contextid(),
+                    $file->get_component(),
+                    $file->get_filearea(),
+                    $file->get_itemid(),
+                    $file->get_filepath(),
+                    $file->get_filename()
+                );
+                $filelinksarr[] = html_writer::link($url, $file->get_filename());
+            }
+            $filelinks = implode(', ', $filelinksarr);
+        }
     }
 
-    // Estado y botón de retroalimentación IA.
+    // Estado IA.
     $record = $DB->get_record('local_assign_ai_pending', [
         'courseid' => $course->id,
         'assignmentid' => $cm->id,
@@ -125,28 +150,21 @@ foreach ($students as $student) {
                 $aistatus = get_string('statuspending', 'local_assign_ai');
         }
 
-        // Botón verde para abrir modal.
         $aibutton = html_writer::tag(
             'button',
             get_string('viewdetails', 'local_assign_ai'),
-            [
-                'class' => 'btn btn-success view-details',
-                'data-token' => $record->approval_token,
-            ]
+            ['class' => 'btn btn-success view-details', 'data-token' => $record->approval_token]
         );
     } else {
         $aistatus = get_string('nostatus', 'local_assign_ai');
         $aibutton = html_writer::tag(
             'button',
             get_string('viewdetails', 'local_assign_ai'),
-            [
-                'class' => 'btn btn-success view-details',
-                'disabled' => 'disabled',
-            ]
+            ['class' => 'btn btn-success view-details', 'disabled' => 'disabled']
         );
     }
 
-    // Botón azul → primero procesa IA y luego abre grader.
+    // Botón azul → grader.
     $viewurl = new moodle_url('/local/assign_ai/review_submission.php', [
         'id' => $cmid,
         'userid' => $student->id,
@@ -155,7 +173,7 @@ foreach ($students as $student) {
     $button = html_writer::link(
         $viewurl,
         get_string('qualify', 'local_assign_ai'),
-        ['class' => 'btn btn-primary'],
+        ['class' => 'btn btn-primary']
     );
 
     // Botón gris → revisar IA por usuario.
@@ -166,18 +184,20 @@ foreach ($students as $student) {
     $reviewbtn = html_writer::link(
         $reviewurl,
         get_string('review', 'local_assign_ai'),
-        ['class' => 'btn btn-secondary'],
+        ['class' => 'btn btn-warning']
     );
 
-    $table->data[] = [
-        fullname($student),
-        $student->email,
-        $status,
-        $feedbacktext,
-        $aistatus,
-        $button . ' ' . $aibutton . ' ' . $reviewbtn,
+    $rows[] = [
+        'fullname'      => fullname($student),
+        'email'         => $student->email,
+        'status'        => $status,
+        'lastmodified'  => $lastmodified,
+        'files'         => $filelinks,
+        'aistatus'      => $aistatus,
+        'actions'       => $button . ' ' . $aibutton . ' ' . $reviewbtn,
     ];
 }
 
-echo html_writer::table($table);
+$templatecontext = ['rows' => $rows];
+echo $OUTPUT->render_from_template('local_assign_ai/review_table', $templatecontext);
 echo $OUTPUT->footer();
