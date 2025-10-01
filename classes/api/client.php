@@ -44,7 +44,7 @@ class client {
         // Example: Create a new AI service client.
         // $client = new ai_services_api();
         // Example: Send the request.
-        // $response = $client->request('POST', '/forum/chat', $payload);
+        // $response = $client->request('POST', '/assign/answer', $payload);
         // Example: Return only the reply.
 
         return [

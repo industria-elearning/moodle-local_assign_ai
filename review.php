@@ -175,14 +175,14 @@ foreach ($students as $student) {
         $aibutton = html_writer::tag(
             'button',
             get_string('viewdetails', 'local_assign_ai'),
-            ['class' => 'btn btn-success view-details', 'data-token' => $record->approval_token]
+            ['class' => 'btn btn-success view-details mb-2 mr-2', 'data-token' => $record->approval_token]
         );
     } else {
         $aistatus = get_string('nostatus', 'local_assign_ai');
         $aibutton = html_writer::tag(
             'button',
             get_string('viewdetails', 'local_assign_ai'),
-            ['class' => 'btn btn-success view-details', 'disabled' => 'disabled']
+            ['class' => 'btn btn-success view-details mb-2 mr-2', 'disabled' => 'disabled']
         );
     }
 
@@ -195,7 +195,7 @@ foreach ($students as $student) {
     $button = html_writer::link(
         $viewurl,
         get_string('qualify', 'local_assign_ai'),
-        ['class' => 'btn btn-primary']
+        ['class' => 'btn btn-primary mb-2 mr-2']
     );
 
     // Botón gris → revisar IA por usuario.
@@ -218,14 +218,19 @@ foreach ($students as $student) {
         );
     }
 
+    $actions = html_writer::div(
+        $button . $aibutton . $reviewbtn,
+        'd-flex flex-wrap flex-sm-column flex-md-row justify-content-center align-items-center'
+    );
+
     $rows[] = [
-        'fullname'      => fullname($student),
-        'email'         => $student->email,
-        'status'        => $status,
-        'lastmodified'  => $lastmodified,
-        'files'         => $filelinks,
-        'aistatus'      => $aistatus,
-        'actions'       => $button . ' ' . $aibutton . ' ' . $reviewbtn,
+        'fullname' => fullname($student),
+        'email' => $student->email,
+        'status' => $status,
+        'lastmodified' => $lastmodified,
+        'files' => $filelinks,
+        'aistatus' => $aistatus,
+        'actions' => $actions,
     ];
 }
 

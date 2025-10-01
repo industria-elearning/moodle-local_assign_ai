@@ -47,7 +47,6 @@ $token = null;
 $processedcount = 0;
 
 if ($all) {
-    // Revisar todos los estudiantes.
     $students = get_enrolled_users($context, 'mod/assign:submit');
     foreach ($students as $student) {
         $result = process_submission_ai($assign, $course, $student, $DB, true);
@@ -78,7 +77,6 @@ if ($all) {
     }
 
 } else if ($userid) {
-    // Revisar solo un usuario.
     $student = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
     $token = process_submission_ai($assign, $course, $student, $DB, false);
 
@@ -92,7 +90,6 @@ if ($all) {
     }
 }
 
-// 🔹 Redirección final
 if ($goto === 'grader' && $userid) {
     $params = [
         'id' => $cmid,
@@ -124,7 +121,6 @@ function process_submission_ai(assign $assign, $course, $student, $DB, $countmod
     $submission = $assign->get_user_submission($student->id, false);
     if (!$submission || $submission->status !== 'submitted') {
         if (!$countmode) {
-            // Para "Revisar uno": devolver token existente si lo hay.
             $record = $DB->get_record('local_assign_ai_pending', [
                 'courseid' => $course->id,
                 'assignmentid' => $assign->get_course_module()->id,
@@ -132,7 +128,7 @@ function process_submission_ai(assign $assign, $course, $student, $DB, $countmod
             ]);
             return $record ? $record->approval_token : null;
         }
-        return null; // En "Revisar todos" no se cuenta nada.
+        return null;
     }
 
     $fs = get_file_storage();
@@ -183,40 +179,25 @@ function process_submission_ai(assign $assign, $course, $student, $DB, $countmod
     ]);
 
     if ($existing) {
-        if ($existing->status === 'approve' || $existing->status === 'rejected') {
-            // Se cuenta como revisado.
-            return $existing->approval_token;
+        if ($countmode) {
+            return null;
         }
-
-        if ($existing->status === 'pending') {
-            // ⚡ En revisar todos no se cuenta.
-            if ($countmode) {
-                return null;
-            }
-            return $existing->approval_token;
-        }
-
-        // Actualización genérica (aunque normalmente no llega aquí).
-        $existing->message = $data['reply'];
-        $existing->timemodified = time();
-        $DB->update_record('local_assign_ai_pending', $existing);
         return $existing->approval_token;
-
-    } else {
-        // Crear nuevo feedback.
-        $token = bin2hex(random_bytes(16));
-        $record = (object)[
-            'courseid'      => $course->id,
-            'assignmentid'  => $assign->get_course_module()->id,
-            'title'         => $assign->get_instance()->name,
-            'userid'        => $student->id,
-            'message'       => $data['reply'],
-            'status'        => 'pending',
-            'approval_token' => $token,
-            'timecreated'   => time(),
-            'timemodified'  => time(),
-        ];
-        $DB->insert_record('local_assign_ai_pending', $record);
-        return $token;
     }
+
+    $token = bin2hex(random_bytes(16));
+    $record = (object)[
+        'courseid'      => $course->id,
+        'assignmentid'  => $assign->get_course_module()->id,
+        'title'         => $assign->get_instance()->name,
+        'userid'        => $student->id,
+        'message'       => $data['reply'],
+        'status'        => 'pending',
+        'approval_token' => $token,
+        'timecreated'   => time(),
+        'timemodified'  => time(),
+    ];
+    $DB->insert_record('local_assign_ai_pending', $record);
+
+    return $token;
 }
