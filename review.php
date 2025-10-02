@@ -186,12 +186,22 @@ foreach ($students as $student) {
         );
     }
 
-    // Botón azul → grader (siempre activo).
-    $viewurl = new moodle_url('/local/assign_ai/review_submission.php', [
-        'id' => $cmid,
-        'userid' => $student->id,
-        'goto' => 'grader',
-    ]);
+    // Botón azul → grader.
+    if ($record && !empty($record->approval_token)) {
+        $viewurl = new moodle_url('/mod/assign/view.php', [
+            'id' => $cmid,
+            'action' => 'grader',
+            'userid' => $student->id,
+            'aitoken' => $record->approval_token,
+        ]);
+    } else {
+        $viewurl = new moodle_url('/mod/assign/view.php', [
+            'id' => $cmid,
+            'action' => 'grader',
+            'userid' => $student->id,
+        ]);
+    }
+
     $button = html_writer::link(
         $viewurl,
         get_string('qualify', 'local_assign_ai'),

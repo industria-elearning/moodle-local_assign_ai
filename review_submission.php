@@ -138,7 +138,7 @@ function process_submission_ai(assign $assign, $course, $student, $DB, $countmod
         'submission_files',
         $submission->id,
         'id',
-        false,
+        false
     );
 
     if (empty($files)) {
@@ -146,28 +146,29 @@ function process_submission_ai(assign $assign, $course, $student, $DB, $countmod
     }
 
     $file = reset($files);
-    $filepath = $CFG->dataroot . '/temp/assign_ai/' . $file->get_filename();
-    @mkdir(dirname($filepath), 0777, true);
-    $file->copy_content_to($filepath);
 
-    $textcontent = "Contenido convertido del archivo: " . $file->get_filename();
+    $tempfile = $file->copy_content_to_temp();
+    if (!$tempfile) {
+        return null;
+    }
 
-    $assignmentdata = [
-        'id' => $assign->get_course_module()->id,
-        'title' => $assign->get_instance()->name,
-        'description' => $assign->get_instance()->intro,
-    ];
-    $rubric = build_rubric_json($assign);
+    $assignment = $assign->get_instance();
 
     $payload = [
+        'site_id' => md5($CFG->wwwroot),
+        'course_id' => $course->id,
         'course' => $course->fullname,
-        'assignment' => $assignmentdata,
-        'rubric' => $rubric,
-        'student' => [
-            'id' => $student->id,
-            'name' => fullname($student),
-            'submission_assign' => $textcontent,
-        ],
+        'assignment_id' => $assign->get_course_module()->id,
+        'assignment_title' => $assignment->name,
+        'assignment_description' => $assignment->intro,
+         'rubric' => json_encode(build_rubric_json($assign), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        'student_id' => $student->id,
+        'student_name' => fullname($student),
+        'file' => new \CURLFile(
+            $tempfile,
+            $file->get_mimetype(),
+            $file->get_filename()
+        ),
     ];
 
     $data = client::send_to_ai($payload);
@@ -189,7 +190,7 @@ function process_submission_ai(assign $assign, $course, $student, $DB, $countmod
     $record = (object)[
         'courseid'      => $course->id,
         'assignmentid'  => $assign->get_course_module()->id,
-        'title'         => $assign->get_instance()->name,
+        'title'         => $assignment->name,
         'userid'        => $student->id,
         'message'       => $data['reply'],
         'status'        => 'pending',
