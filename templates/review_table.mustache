@@ -1,0 +1,63 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_assign_ai/review
+    Plantilla para revisar respuestas AI.
+
+    Example context (json):
+    {
+      "fullname": "María López",
+      "email": "maria.lopez@example.com",
+      "status": "No enviado",
+      "lastmodified": "-",
+      "files": "",
+      "aistatus": "N/A",
+      "actions": "<span class='text-muted'>Sin acciones</span>"
+    }
+}}
+
+<table class="table table-bordered table-striped w-100 text-center">
+    <thead>
+        <tr>
+            <th>{{#str}} fullname, local_assign_ai {{/str}}</th>
+            <th>{{#str}} email, local_assign_ai {{/str}}</th>
+            <th>{{#str}} status, local_assign_ai {{/str}}</th>
+            <th>{{#str}} lastmodified, local_assign_ai {{/str}}</th>
+            <th>{{#str}} submittedfiles, local_assign_ai {{/str}}</th>
+            <th>{{#str}} aistatus, local_assign_ai {{/str}}</th>
+            <th>{{#str}} actions, local_assign_ai {{/str}}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#rows}}
+        <tr>
+            <td>{{fullname}}</td>
+            <td>{{email}}</td>
+            <td>{{status}}</td>
+            <td>{{lastmodified}}</td>
+            <td>{{{files}}}</td>
+            <td>{{aistatus}}</td>
+            <td>{{{actions}}}</td>
+        </tr>
+        {{/rows}}
+        {{^rows}}
+        <tr>
+            <td colspan="7" class="text-center">{{#str}} norecords, local_assign_ai {{/str}}</td>
+        </tr>
+        {{/rows}}
+    </tbody>
+</table>

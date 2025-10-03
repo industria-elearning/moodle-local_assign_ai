@@ -25,4 +25,30 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$string['actions'] = 'Actions';
+$string['aistatus'] = 'AI Status';
+$string['email'] = 'Email';
+$string['feedbackcomments'] = 'Comments';
+$string['fullname'] = 'Full name';
+$string['lastmodified'] = 'Last modified';
+$string['manytasksreviewed'] = '{$a} tasks reviewed';
+$string['modaltitle'] = 'AI Feedback';
+$string['norecords'] = 'No records found';
+$string['nostatus'] = 'No feedback';
+$string['notasksfound'] = 'No task to review';
+$string['onetaskreviewed'] = '1 task reviewed';
 $string['pluginname'] = 'Assignment AI';
+$string['qualify'] = 'Grade';
+$string['review'] = 'Review';
+$string['reviewall'] = 'Review all';
+$string['reviewwithai'] = 'Review with AI';
+$string['save'] = 'Save';
+$string['saveapprove'] = 'Save and Approve';
+$string['status'] = 'Status';
+$string['statusapprove'] = 'Approved';
+$string['statuspending'] = 'Pending';
+$string['submission_new'] = 'New';
+$string['submission_none'] = 'No submission';
+$string['submission_submitted'] = 'Submitted';
+$string['submittedfiles'] = 'Submitted files';
+$string['viewdetails'] = 'View details';

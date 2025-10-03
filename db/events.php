@@ -15,17 +15,22 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Plugin version and other meta-data are defined here.
+ * Event observers.
  *
  * @package     local_assign_ai
  * @copyright   2025 Piero Llanos <piero@datacurso.com>
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'local_assign_ai';
-$plugin->release = '1.0.0';
-$plugin->version = 2025092511;
-$plugin->requires = 2022112800;
-$plugin->maturity = MATURITY_STABLE;
+$observers = [
+    [
+        'eventname' => '\mod_assign\event\submission_graded',
+        'callback' => 'local_assign_ai\observer::submission_graded',
+        'includefile' => '/local/assign_ai/classes/observer.php',
+        'internal' => false,
+        'priority' => 9999,
+    ],
+];

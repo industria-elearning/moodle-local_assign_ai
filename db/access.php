@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Plugin version and other meta-data are defined here.
+ * Capabilities for local_assign_ai plugin.
  *
  * @package     local_assign_ai
  * @copyright   2025 Piero Llanos <piero@datacurso.com>
@@ -24,8 +24,14 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'local_assign_ai';
-$plugin->release = '1.0.0';
-$plugin->version = 2025092511;
-$plugin->requires = 2022112800;
-$plugin->maturity = MATURITY_STABLE;
+$capabilities = [
+    'local/assign_ai:review' => [
+        'captype'      => 'read',
+        'contextlevel' => CONTEXT_MODULE,
+        'archetypes'   => [
+            'teacher'        => CAP_ALLOW,
+            'editingteacher' => CAP_ALLOW,
+            'manager'        => CAP_ALLOW,
+        ],
+    ],
+];
