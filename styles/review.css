@@ -1,0 +1,16 @@
+/* Contenedor de botones en la columna Acciones */
+.local_assign_ai_action-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Ajuste para pantallas pequeñas */
+@media (max-width: 768px) {
+    .local_assign_ai_action-buttons  {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+}
