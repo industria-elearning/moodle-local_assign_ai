@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Configuración del plugin Forum AI.
+ * Configuración del plugin Assign AI.
  *
  * @package     local_assign_ai
  * @copyright  2025 Piero Llanos

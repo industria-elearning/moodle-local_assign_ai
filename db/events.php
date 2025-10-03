@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Capabilities for local_assign_ai plugin.
+ * Event observers.
  *
  * @package     local_assign_ai
  * @copyright   2025 Piero Llanos <piero@datacurso.com>

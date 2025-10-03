@@ -195,8 +195,6 @@ function process_submission_ai(assign $assign, $course, $student, $DB, $countmod
         'message'       => $data['reply'],
         'status'        => 'pending',
         'approval_token' => $token,
-        'timecreated'   => time(),
-        'timemodified'  => time(),
     ];
     $DB->insert_record('local_assign_ai_pending', $record);
 

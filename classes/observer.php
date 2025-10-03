@@ -64,7 +64,7 @@ class observer {
                     $record->message = $feedback->commenttext;
                     debugging("Nuevo mensaje desde feedback: {$feedback->commenttext}.", DEBUG_DEVELOPER);
                 } else {
-                    debugging("⚠️ No se encontró feedback para gradeid=$gradeid.", DEBUG_DEVELOPER);
+                    debugging("No se encontró feedback para gradeid=$gradeid.", DEBUG_DEVELOPER);
                 }
 
                 // Actualizar estado.
@@ -74,7 +74,7 @@ class observer {
                 $DB->update_record('local_assign_ai_pending', $record);
                 debugging('Record updated to approved + message refreshed!.', DEBUG_DEVELOPER);
             } else {
-                debugging('❌ No matching record found en local_assign_ai_pending.', DEBUG_DEVELOPER);
+                debugging('No matching record found en local_assign_ai_pending.', DEBUG_DEVELOPER);
             }
 
         } catch (\Exception $e) {
