@@ -31,10 +31,9 @@ namespace local_assign_ai;
 class observer {
 
     /**
-     * Normaliza un puntaje para que se guarde como int si no tiene decimales,
-     * o como float en caso contrario.
+     * Normalizes a score to be saved as an int if it has no decimal places, or as a float otherwise.
      *
-     * @param mixed $score Valor del puntaje (string, int o float).
+     * @param mixed $score Score value (string, int or float).
      * @return int|float
      */
     private static function normalize_points($score) {
@@ -43,14 +42,14 @@ class observer {
     }
 
     /**
-     * Maneja el evento de calificación de una entrega.
+     * Handles the grading event for a submission.
      *
-     * Actualiza en la tabla local_assign_ai_pending:
-     *  - El feedback (comentarios).
-     *  - La nota.
+     * Updates the local_assign_ai_pending table:
+     *  - The feedback (comments).
+     *  - The grade.
      *  - La respuesta de la rúbrica (rubric_response).
      *
-     * @param \mod_assign\event\submission_graded $event El evento de calificación.
+     * @param \mod_assign\event\submission_graded $event The grading event.
      * @return void
      */
     public static function submission_graded(\mod_assign\event\submission_graded $event) {
