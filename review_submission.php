@@ -131,6 +131,9 @@ function process_submission_ai(assign $assign, $course, $student, $DB, $countmod
         return null;
     }
 
+    $assignment = $assign->get_instance();
+    $cmid = $assign->get_course_module()->id;
+
     $fs = get_file_storage();
     $files = $fs->get_area_files(
         $assign->get_context()->id,
@@ -141,41 +144,36 @@ function process_submission_ai(assign $assign, $course, $student, $DB, $countmod
         false
     );
 
+    $submissioncontent = null;
     if (empty($files)) {
-        return null;
+        $onlinetext = $DB->get_record('assignsubmission_onlinetext', [
+            'submission' => $submission->id,
+        ]);
+        if ($onlinetext && !empty($onlinetext->onlinetext)) {
+            $submissioncontent = $onlinetext->onlinetext;
+        }
     }
-
-    $file = reset($files);
-
-    $tempfile = $file->copy_content_to_temp();
-    if (!$tempfile) {
-        return null;
-    }
-
-    $assignment = $assign->get_instance();
 
     $payload = [
         'site_id' => md5($CFG->wwwroot),
-        'course_id' => $course->id,
+        'course_id' => (string)$course->id,
         'course' => $course->fullname,
-        'assignment_id' => $assign->get_course_module()->id,
+        'assignment_id' => (string)$assignment->id,
+        'cmi_id' => (string)$cmid,
         'assignment_title' => $assignment->name,
         'assignment_description' => $assignment->intro,
-         'rubric' => json_encode(build_rubric_json($assign), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-        'student_id' => $student->id,
+        'rubric' => build_rubric_json($assign),
+        'student_id' => (string)$student->id,
         'student_name' => fullname($student),
-        'file' => new \CURLFile(
-            $tempfile,
-            $file->get_mimetype(),
-            $file->get_filename()
-        ),
+        'submission_assign' => $submissioncontent,
+        'maximum_grade' => (int)$assignment->grade,
     ];
 
     $data = client::send_to_ai($payload);
 
     $existing = $DB->get_record('local_assign_ai_pending', [
         'courseid' => $course->id,
-        'assignmentid' => $assign->get_course_module()->id,
+        'assignmentid' => $cmid,
         'userid' => $student->id,
     ]);
 
@@ -189,10 +187,12 @@ function process_submission_ai(assign $assign, $course, $student, $DB, $countmod
     $token = bin2hex(random_bytes(16));
     $record = (object)[
         'courseid'      => $course->id,
-        'assignmentid'  => $assign->get_course_module()->id,
+        'assignmentid'  => $cmid,
         'title'         => $assignment->name,
         'userid'        => $student->id,
         'message'       => $data['reply'],
+        'grade'          => $data['grade'] ?? null,
+        'rubric_response' => isset($data['rubric']) ? json_encode($data['rubric'], JSON_UNESCAPED_UNICODE) : null,
         'status'        => 'pending',
         'approval_token' => $token,
     ];

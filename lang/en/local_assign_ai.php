@@ -30,6 +30,7 @@ $string['aistatus'] = 'AI Status';
 $string['email'] = 'Email';
 $string['feedbackcomments'] = 'Comments';
 $string['fullname'] = 'Full name';
+$string['grade'] = 'Grade';
 $string['lastmodified'] = 'Last modified';
 $string['manytasksreviewed'] = '{$a} tasks reviewed';
 $string['modaltitle'] = 'AI Feedback';
