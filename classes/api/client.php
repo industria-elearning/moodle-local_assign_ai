@@ -49,6 +49,54 @@ class client {
 
         return [
             'reply' => json_encode($payload, JSON_PRETTY_PRINT),
+            'grade' => 14,
+            "rubric" => [
+                [
+                    "criterion" => "Estructura",
+                    "levels" => [
+                        [
+                            "points" => 3,
+                            "comment" => "Excelente",
+                        ],
+                    ],
+                ],
+                [
+                    "criterion" => "Argumentacion",
+                    "levels" => [
+                        [
+                            "points" => 1,
+                            "comment" => "A mejorar",
+                        ],
+                    ],
+                ],
+                [
+                    "criterion" => "Uso de fuentes",
+                    "levels" => [
+                        [
+                            "points" => 3,
+                            "comment" => "Excelente",
+                        ],
+                    ],
+                ],
+                [
+                    "criterion" => "Redaccion",
+                    "levels" => [
+                        [
+                            "points" => 4,
+                            "comment" => "Super Excelente",
+                        ],
+                    ],
+                ],
+                [
+                    "criterion" => "Originalidad",
+                    "levels" => [
+                        [
+                            "points" => 3,
+                            "comment" => "Super Excelente",
+                        ],
+                    ],
+                ],
+            ],
             'meta' => [
                 'provider' => 'mock',
                 'model' => 'gpt-5-mini',

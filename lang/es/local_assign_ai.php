@@ -30,6 +30,7 @@ $string['aistatus'] = 'Estado IA';
 $string['email'] = 'Correo electrónico';
 $string['feedbackcomments'] = 'Comentarios';
 $string['fullname'] = 'Nombre completo';
+$string['grade'] = 'Calificación';
 $string['lastmodified'] = 'Última modificación';
 $string['manytasksreviewed'] = 'Se revisaron {$a} tareas';
 $string['modaltitle'] = 'Retroalimentación IA';

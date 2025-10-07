@@ -23,7 +23,6 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
 
 /**
  * Execute local_assign_ai upgrade from the given old version.
@@ -66,6 +65,24 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
 
         // Assign_ai savepoint reached.
         upgrade_plugin_savepoint(true, 2025092506, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2025092600) {
+        $table = new xmldb_table('local_assign_ai_pending');
+
+        // Agregar campo grade si no existe.
+        $field = new xmldb_field('grade', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'message');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Agregar campo rubric_response si no existe.
+        $field = new xmldb_field('rubric_response', XMLDB_TYPE_TEXT, null, null, null, null, null, 'grade');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2025092600, 'local', 'assign_ai');
     }
 
     return true;

@@ -31,9 +31,25 @@ namespace local_assign_ai;
 class observer {
 
     /**
-     * Handles the submission graded event.
+     * Normalizes a score to be saved as an int if it has no decimal places, or as a float otherwise.
      *
-     * @param \mod_assign\event\submission_graded $event The graded submission event.
+     * @param mixed $score Score value (string, int or float).
+     * @return int|float
+     */
+    private static function normalize_points($score) {
+        $float = (float) $score;
+        return (fmod($float, 1.0) == 0.0) ? (int) $float : $float;
+    }
+
+    /**
+     * Handles the grading event for a submission.
+     *
+     * Updates the local_assign_ai_pending table:
+     *  - The feedback (comments).
+     *  - The grade.
+     *  - La respuesta de la rúbrica (rubric_response).
+     *
+     * @param \mod_assign\event\submission_graded $event The grading event.
      * @return void
      */
     public static function submission_graded(\mod_assign\event\submission_graded $event) {
@@ -41,44 +57,69 @@ class observer {
 
         try {
             $data = $event->get_data();
-            $cmid   = $data['contextinstanceid'] ?? null;
+            $cmid = $data['contextinstanceid'] ?? null;
             $userid = $data['relateduserid'] ?? null;
             $gradeid = $data['objectid'] ?? null;
 
-            debugging('=== DEBUGGING ===', DEBUG_DEVELOPER);
-            debugging("Event CMID: $cmid, User ID: $userid, Grade ID: $gradeid.", DEBUG_DEVELOPER);
-
-            // Buscar registro existente.
             $record = $DB->get_record('local_assign_ai_pending', [
                 'assignmentid' => $cmid,
                 'userid' => $userid,
             ]);
 
-            if ($record) {
-                // Buscar feedback en assignfeedback_comments con el gradeid.
-                $feedback = $DB->get_record('assignfeedback_comments', [
-                    'grade' => $gradeid,
-                ]);
-
-                if ($feedback && !empty($feedback->commenttext)) {
-                    $record->message = $feedback->commenttext;
-                    debugging("Nuevo mensaje desde feedback: {$feedback->commenttext}.", DEBUG_DEVELOPER);
-                } else {
-                    debugging("No se encontró feedback para gradeid=$gradeid.", DEBUG_DEVELOPER);
-                }
-
-                // Actualizar estado.
-                $record->status = 'approve';
-                $record->timemodified = time();
-
-                $DB->update_record('local_assign_ai_pending', $record);
-                debugging('Record updated to approved + message refreshed!.', DEBUG_DEVELOPER);
-            } else {
-                debugging('No matching record found en local_assign_ai_pending.', DEBUG_DEVELOPER);
+            if (!$record) {
+                return;
             }
 
+            $feedback = $DB->get_record('assignfeedback_comments', ['grade' => $gradeid]);
+            if ($feedback && !empty($feedback->commenttext)) {
+                $record->message = $feedback->commenttext;
+            }
+
+            $grade = $DB->get_record('assign_grades', ['id' => $gradeid]);
+            if ($grade && isset($grade->grade)) {
+                $record->grade = self::normalize_points($grade->grade);
+            }
+
+            $instances = $DB->get_records('grading_instances', [
+                'itemid' => $gradeid,
+                'status' => 1,
+            ]);
+
+            if ($instances) {
+                foreach ($instances as $gi) {
+                    $fillings = $DB->get_records('gradingform_rubric_fillings', ['instanceid' => $gi->id]);
+                    if ($fillings) {
+                        $rubricdata = [];
+                        foreach ($fillings as $f) {
+                            $criterion = $DB->get_field('gradingform_rubric_criteria', 'description', ['id' => $f->criterionid]);
+                            $score = $f->levelid
+                                ? $DB->get_field('gradingform_rubric_levels', 'score', ['id' => $f->levelid])
+                                : 0;
+
+                            $rubricdata[] = [
+                                'criterion' => $criterion,
+                                'levels' => [
+                                    [
+                                        'points' => self::normalize_points($score),
+                                        'comment' => $f->remark ?? '',
+                                    ],
+                                ],
+                            ];
+                        }
+
+                        $record->rubric_response = json_encode($rubricdata, JSON_UNESCAPED_UNICODE);
+
+                        break;
+                    }
+                }
+            }
+
+            $record->status = 'approve';
+            $record->timemodified = time();
+            $DB->update_record('local_assign_ai_pending', $record);
+
         } catch (\Exception $e) {
-            debugging('ERROR: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            debugging('Exception in submission_graded observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
     }
 }

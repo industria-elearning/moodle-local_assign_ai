@@ -159,6 +159,7 @@ foreach ($students as $student) {
         'assignmentid' => $cm->id,
         'userid' => $student->id,
     ]);
+    $grade = '-';
 
     if ($record) {
         switch ($record->status) {
@@ -178,6 +179,11 @@ foreach ($students as $student) {
             get_string('viewdetails', 'local_assign_ai'),
             ['class' => 'btn btn-success view-details', 'data-token' => $record->approval_token]
         );
+
+        if ($record->grade !== null) {
+            $grade = $record->grade;
+        }
+
     } else {
         $aistatus = get_string('nostatus', 'local_assign_ai');
         $aibutton = html_writer::tag(
@@ -241,6 +247,7 @@ foreach ($students as $student) {
         'lastmodified' => $lastmodified,
         'files' => $filelinks,
         'aistatus' => $aistatus,
+        'grade' => $grade,
         'actions' => $actions,
     ];
 }
