@@ -48,13 +48,5 @@ $functions = [
         'description' => 'Cambiar estado de retroalimentación IA',
         'type'        => 'write',
         'ajax'        => true,
-    ],
-    'local_assign_ai_review_submission' => [
-        'classname'   => 'local_assign_ai\external\review_submission',
-        'methodname'  => 'execute',
-        'classpath'   => '',
-        'description' => 'Cambiar estado de retroalimentación IA',
-        'type'        => 'write',
-        'ajax'        => true,
-    ],
+    ]
 ];
