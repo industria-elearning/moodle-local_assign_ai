@@ -163,7 +163,7 @@ function process_submission_ai(assign $assign, $course, $student, $DB, $countmod
         'assignment_title' => $assignment->name,
         'assignment_description' => $assignment->intro,
         'rubric' => build_rubric_json($assign),
-        'student_id' => (string)$student->id,
+        'userid' => (string)$student->id,
         'student_name' => fullname($student),
         'submission_assign' => $submissioncontent,
         'maximum_grade' => (int)$assignment->grade,
