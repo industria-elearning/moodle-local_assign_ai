@@ -18,7 +18,7 @@
  * Review page for local_assign_ai.
  *
  * @package     local_assign_ai
- * @copyright   2025 Piero Llanos
+ * @copyright   2025 Datacurso
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -183,7 +183,6 @@ foreach ($students as $student) {
         if ($record->grade !== null) {
             $grade = $record->grade;
         }
-
     } else {
         $aistatus = get_string('nostatus', 'local_assign_ai');
         $aibutton = html_writer::tag(
@@ -252,6 +251,13 @@ foreach ($students as $student) {
     ];
 }
 
-$templatecontext = ['rows' => $rows];
+$renderer = $PAGE->get_renderer('core');
+$headerlogo = new \local_assign_ai\output\header_logo();
+$logocontext = $headerlogo->export_for_template($renderer);
+$templatecontext = [
+    'rows' => $rows,
+    'headerlogo' => $logocontext,
+];
+
 echo $OUTPUT->render_from_template('local_assign_ai/review_table', $templatecontext);
 echo $OUTPUT->footer();

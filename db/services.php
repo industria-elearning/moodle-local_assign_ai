@@ -17,8 +17,8 @@
 /**
  * Configuración del plugin Assign AI.
  *
- * @package     local_assign_ai
- * @copyright  2025 Piero Llanos
+ * @package    local_assign_ai
+ * @copyright  2025 Datacurso
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -43,14 +43,6 @@ $functions = [
     ],
     'local_assign_ai_change_status' => [
         'classname'   => 'local_assign_ai\external\change_status',
-        'methodname'  => 'execute',
-        'classpath'   => '',
-        'description' => 'Cambiar estado de retroalimentación IA',
-        'type'        => 'write',
-        'ajax'        => true,
-    ],
-    'local_assign_ai_review_submission' => [
-        'classname'   => 'local_assign_ai\external\review_submission',
         'methodname'  => 'execute',
         'classpath'   => '',
         'description' => 'Cambiar estado de retroalimentación IA',

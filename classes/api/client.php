@@ -18,7 +18,7 @@
  * Client API for local_assign_ai.
  *
  * @package     local_assign_ai
- * @copyright   2025 Piero Llanos <piero@datacurso.com>
+ * @copyright   2025 Datacurso
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -31,7 +31,6 @@ use local_assign_ai\utils;
  * Client to interact with AI services.
  */
 class client {
-
     /**
      * Sends the payload to the AI provider and returns the response.
      *
@@ -41,67 +40,14 @@ class client {
     public static function send_to_ai($payload) {
         $payload = utils::normalize_payload($payload);
 
-        // Example: Create a new AI service client.
-        // $client = new ai_services_api();
-        // Example: Send the request.
-        // $response = $client->request('POST', '/assign/answer', $payload);
-        // Example: Return only the reply.
+        $client = new ai_services_api();
+
+        $response = $client->request('POST', '/assign/answer', $payload);
 
         return [
-            'reply' => json_encode($payload, JSON_PRETTY_PRINT),
-            'grade' => 14,
-            "rubric" => [
-                [
-                    "criterion" => "Estructura",
-                    "levels" => [
-                        [
-                            "points" => 3,
-                            "comment" => "Excelente",
-                        ],
-                    ],
-                ],
-                [
-                    "criterion" => "Argumentacion",
-                    "levels" => [
-                        [
-                            "points" => 1,
-                            "comment" => "A mejorar",
-                        ],
-                    ],
-                ],
-                [
-                    "criterion" => "Uso de fuentes",
-                    "levels" => [
-                        [
-                            "points" => 3,
-                            "comment" => "Excelente",
-                        ],
-                    ],
-                ],
-                [
-                    "criterion" => "Redaccion",
-                    "levels" => [
-                        [
-                            "points" => 4,
-                            "comment" => "Super Excelente",
-                        ],
-                    ],
-                ],
-                [
-                    "criterion" => "Originalidad",
-                    "levels" => [
-                        [
-                            "points" => 3,
-                            "comment" => "Super Excelente",
-                        ],
-                    ],
-                ],
-            ],
-            'meta' => [
-                'provider' => 'mock',
-                'model' => 'gpt-5-mini',
-                'userid' => $payload['student']['id'] ?? null,
-            ],
+            'reply'  => $response['reply'],
+            'grade'  => $response['grade'],
+            'rubric' => $response['rubric'],
         ];
     }
 }

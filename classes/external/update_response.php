@@ -19,7 +19,7 @@
  *
  * @package     local_assign_ai
  * @category    external
- * @copyright   2025 Piero Llanos <piero@datacurso.com>
+ * @copyright   2025 Datacurso
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -38,7 +38,6 @@ use external_single_structure;
  * External API to update the response of a pending approval.
  */
 class update_response extends external_api {
-
     /**
      * Returns the description of the parameters for this external function.
      *

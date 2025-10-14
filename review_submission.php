@@ -18,13 +18,13 @@
  * Review submission processor for local_assign_ai.
  *
  * @package     local_assign_ai
- * @copyright   2025 Piero Llanos <piero@datacurso.com>
+ * @copyright   2025 Datacurso
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require_once(__DIR__.'/../../config.php');
-require_once($CFG->dirroot.'/mod/assign/locallib.php');
-require_once(__DIR__.'/locallib.php');
+require_once(__DIR__ . '/../../config.php');
+require_once($CFG->dirroot . '/mod/assign/locallib.php');
+require_once(__DIR__ . '/locallib.php');
 
 use local_assign_ai\api\client;
 
@@ -75,7 +75,6 @@ if ($all) {
             \core\output\notification::NOTIFY_SUCCESS
         );
     }
-
 } else if ($userid) {
     $student = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
     $token = process_submission_ai($assign, $course, $student, $DB, false);
@@ -163,7 +162,7 @@ function process_submission_ai(assign $assign, $course, $student, $DB, $countmod
         'assignment_title' => $assignment->name,
         'assignment_description' => $assignment->intro,
         'rubric' => build_rubric_json($assign),
-        'student_id' => (string)$student->id,
+        'userid' => (string)$student->id,
         'student_name' => fullname($student),
         'submission_assign' => $submissioncontent,
         'maximum_grade' => (int)$assignment->grade,

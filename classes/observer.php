@@ -19,7 +19,7 @@
  *
  * @package     local_assign_ai
  * @category    event
- * @copyright   2025 Piero Llanos <piero@datacurso.com>
+ * @copyright   2025 Datacurso
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -29,7 +29,6 @@ namespace local_assign_ai;
  * Observer class for handling assignment events.
  */
 class observer {
-
     /**
      * Normalizes a score to be saved as an int if it has no decimal places, or as a float otherwise.
      *
@@ -117,7 +116,6 @@ class observer {
             $record->status = 'approve';
             $record->timemodified = time();
             $DB->update_record('local_assign_ai_pending', $record);
-
         } catch (\Exception $e) {
             debugging('Exception in submission_graded observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
