@@ -17,8 +17,8 @@
 /**
  * Configuración del plugin Assign AI.
  *
- * @package     local_assign_ai
- * @copyright  2025 Piero Llanos
+ * @package    local_assign_ai
+ * @copyright  2025 Datacurso
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -48,5 +48,5 @@ $functions = [
         'description' => 'Cambiar estado de retroalimentación IA',
         'type'        => 'write',
         'ajax'        => true,
-    ]
+    ],
 ];

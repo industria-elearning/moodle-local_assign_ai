@@ -19,7 +19,7 @@
  *
  * @package     local_assign_ai
  * @category    upgrade
- * @copyright   2025 Piero Llanos <piero@datacurso.com>
+ * @copyright   2025 Datacurso
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
