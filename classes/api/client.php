@@ -31,7 +31,6 @@ use local_assign_ai\utils;
  * Client to interact with AI services.
  */
 class client {
-
     /**
      * Sends the payload to the AI provider and returns the response.
      *

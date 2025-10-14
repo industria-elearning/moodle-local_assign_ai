@@ -28,7 +28,6 @@ namespace local_assign_ai\rubric;
  * Helper class to fetch rubric definitions and criteria.
  */
 class rubric_helper {
-
     /**
      * Retrieves the rubric definition and its criteria for a given course module.
      *

@@ -22,9 +22,9 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require_once(__DIR__.'/../../config.php');
-require_once($CFG->dirroot.'/mod/assign/locallib.php');
-require_once(__DIR__.'/locallib.php');
+require_once(__DIR__ . '/../../config.php');
+require_once($CFG->dirroot . '/mod/assign/locallib.php');
+require_once(__DIR__ . '/locallib.php');
 
 use local_assign_ai\api\client;
 
@@ -75,7 +75,6 @@ if ($all) {
             \core\output\notification::NOTIFY_SUCCESS
         );
     }
-
 } else if ($userid) {
     $student = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
     $token = process_submission_ai($assign, $course, $student, $DB, false);

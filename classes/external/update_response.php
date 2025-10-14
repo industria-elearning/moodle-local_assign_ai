@@ -38,7 +38,6 @@ use external_single_structure;
  * External API to update the response of a pending approval.
  */
 class update_response extends external_api {
-
     /**
      * Returns the description of the parameters for this external function.
      *

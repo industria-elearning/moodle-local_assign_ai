@@ -183,7 +183,6 @@ foreach ($students as $student) {
         if ($record->grade !== null) {
             $grade = $record->grade;
         }
-
     } else {
         $aistatus = get_string('nostatus', 'local_assign_ai');
         $aibutton = html_writer::tag(

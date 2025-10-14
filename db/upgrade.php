@@ -41,7 +41,6 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
     // Documentation for the XMLDB Editor can be found at {@link https://docs.moodle.org/dev/XMLDB_editor}.
 
     if ($oldversion < 2025092506) {
-
         // Define table local_assign_ai_pending to be created.
         $table = new xmldb_table('local_assign_ai_pending');
 

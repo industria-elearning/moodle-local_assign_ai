@@ -27,7 +27,7 @@ namespace local_assign_ai\external;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir.'/externallib.php');
+require_once($CFG->libdir . '/externallib.php');
 
 use external_api;
 use external_function_parameters;
@@ -39,7 +39,6 @@ use external_multiple_structure;
  * External API to get details of a pending approval.
  */
 class get_details extends external_api {
-
     /**
      * Returns the description of the parameters for this external function.
      *

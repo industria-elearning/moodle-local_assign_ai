@@ -38,7 +38,6 @@ use external_single_structure;
  * External API to change status of pending approvals.
  */
 class change_status extends external_api {
-
     /**
      * Returns the description of the parameters for this external function.
      *
@@ -86,13 +85,11 @@ class change_status extends external_api {
             ]);
 
             if ($grade) {
-
                 $feedback = $DB->get_record('assignfeedback_comments', ['grade' => $grade->id]);
                 if ($feedback) {
                     $feedback->commenttext = $record->message;
                     $feedback->commentformat = FORMAT_HTML;
                     $DB->update_record('assignfeedback_comments', $feedback);
-
                 } else {
                     $feedback = (object)[
                         'assignment'     => $cm->instance,
@@ -101,12 +98,10 @@ class change_status extends external_api {
                         'commentformat'  => FORMAT_HTML,
                     ];
                     $DB->insert_record('assignfeedback_comments', $feedback);
-
                 }
 
                 $event = \mod_assign\event\submission_graded::create_from_grade($assign, $grade);
                 $event->trigger();
-
             } else {
                 debugging("⚠️ No existe grade para userid={$record->userid}, assignid={$cm->instance}.", DEBUG_DEVELOPER);
             }

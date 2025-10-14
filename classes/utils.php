@@ -28,7 +28,6 @@ namespace local_assign_ai;
  * Helper utilities for local_assign_ai plugin.
  */
 class utils {
-
     /**
      * Mapping of accented and special characters to plain UTF-8 equivalents.
      *
@@ -64,5 +63,4 @@ class utils {
         });
         return $payload;
     }
-
 }
