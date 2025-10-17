@@ -11,6 +11,14 @@ jobs:
     runs-on: ubuntu-22.04
 
     services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: 'postgres'
+          POSTGRES_HOST_AUTH_METHOD: 'trust'
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 3
       mariadb:
         image: mariadb:10
         env:
@@ -25,9 +33,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        php: ['8.1']
-        moodle-branch: ['MOODLE_405_STABLE']
-        database: [mariadb]
+        include:
+          - php: 8.3
+            moodle-branch: MOODLE_405_STABLE
+            database: mariadb
+          - php: 8.3
+            moodle-branch: MOODLE_405_STABLE
+            database: pgsql
 
     steps:
       - name: Check out repository code
@@ -94,9 +106,9 @@ jobs:
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci grunt
 
-      # - name: PHPUnit tests
-      #   if: ${{ !cancelled() }}
-      #   run: moodle-plugin-ci phpunit
+      - name: PHPUnit tests
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpunit
 
       - name: Mark cancelled jobs as failed.
         if: ${{ cancelled() }}
