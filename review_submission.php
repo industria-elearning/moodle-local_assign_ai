@@ -79,7 +79,16 @@ if ($all) {
     $student = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
     $token = process_submission_ai($assign, $course, $student, $DB, false);
 
-    if (!$token) {
+    if ($token === false) {
+        echo $OUTPUT->header();
+        echo html_writer::link(
+            new moodle_url('/local/assign_ai/review.php', ['id' => $cmid]),
+            get_string('continue'),
+            ['class' => 'btn btn-primary']
+        );
+        echo $OUTPUT->footer();
+        exit;
+    } else if (!$token) {
         redirect(
             new moodle_url('/local/assign_ai/review.php', ['id' => $cmid]),
             get_string('notasksfound', 'local_assign_ai'),
@@ -168,7 +177,25 @@ function process_submission_ai(assign $assign, $course, $student, $DB, $countmod
         'maximum_grade' => (int)$assignment->grade,
     ];
 
-    $data = client::send_to_ai($payload);
+    try {
+        $data = client::send_to_ai($payload);
+    } catch (\moodle_exception $e) {
+        debugging('AI request failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        redirect(
+            new moodle_url('/local/assign_ai/review.php', ['id' => $assign->get_course_module()->id]),
+            get_string('error_airequest', 'local_assign_ai', $e->getMessage()),
+            null,
+            \core\output\notification::NOTIFY_ERROR
+        );
+    } catch (\Throwable $e) {
+        debugging('Unexpected AI error: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        redirect(
+            new moodle_url('/local/assign_ai/review.php', ['id' => $assign->get_course_module()->id]),
+            get_string('error_airequest', 'local_assign_ai', $e->getMessage()),
+            null,
+            \core\output\notification::NOTIFY_ERROR
+        );
+    }
 
     $existing = $DB->get_record('local_assign_ai_pending', [
         'courseid' => $course->id,
