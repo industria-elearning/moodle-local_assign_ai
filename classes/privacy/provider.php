@@ -37,7 +37,10 @@ use stdClass;
 /**
  * Privacy provider for the local_assign_ai plugin.
  */
-class provider implements core_userlist_provider, \core_privacy\local\request\plugin\provider, \core_privacy\local\metadata\provider {
+class provider implements
+    core_userlist_provider,
+    \core_privacy\local\request\plugin\provider,
+    \core_privacy\local\metadata\provider {
     /**
      * Describe the types of personal data stored by this plugin.
      *
