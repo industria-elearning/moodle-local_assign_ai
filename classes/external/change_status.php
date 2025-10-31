@@ -46,7 +46,7 @@ class change_status extends external_api {
     public static function execute_parameters() {
         return new external_function_parameters([
             'token'  => new external_value(PARAM_ALPHANUM, 'Approval token', VALUE_REQUIRED),
-            'action' => new external_value(PARAM_ALPHA, 'Acción: approve o rejected', VALUE_REQUIRED),
+            'action' => new external_value(PARAM_ALPHA, 'Action: approve or rejected', VALUE_REQUIRED),
         ]);
     }
 
@@ -109,7 +109,7 @@ class change_status extends external_api {
                 $event = \mod_assign\event\submission_graded::create_from_grade($assign, $grade);
                 $event->trigger();
             } else {
-                debugging("⚠️ No existe grade para userid={$record->userid}, assignid={$cm->instance}.", DEBUG_DEVELOPER);
+                debugging("No grade exists for userid={$record->userid}, assignid={$cm->instance}.", DEBUG_DEVELOPER);
             }
         }
 
@@ -126,8 +126,8 @@ class change_status extends external_api {
      */
     public static function execute_returns() {
         return new external_single_structure([
-            'status'    => new external_value(PARAM_TEXT, 'Estado de la operación'),
-            'newstatus' => new external_value(PARAM_TEXT, 'Nuevo estado aplicado'),
+            'status'    => new external_value(PARAM_TEXT, 'Operation status'),
+            'newstatus' => new external_value(PARAM_TEXT, 'New status applied'),
         ]);
     }
 }

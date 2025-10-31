@@ -12,7 +12,7 @@ export const init = (token) => {
     }])[0].done(data => {
         const message = data.message;
         const rubricResponse = data.rubric_response;
-        const grade = data.grade; // Calificación simple si no hay rúbrica
+        const grade = data.grade; // Simple grade if there is no rubric
 
         const injectMessage = () => {
             const textarea = document.querySelector('#id_assignfeedbackcomments_editor, textarea[id^="id_feedbackcomments_"]');
@@ -61,7 +61,7 @@ export const init = (token) => {
 
             if (!Array.isArray(rubricData)) {
                 Notification.addNotification({
-                    message: 'rubric_response debe ser un array',
+                    message: 'rubric_response must be an array',
                     type: 'error'
                 });
                 return false;
@@ -69,7 +69,7 @@ export const init = (token) => {
 
             let injected = false;
 
-            // Función para normalizar strings (eliminar tildes y espacios extra)
+            // Function to normalize strings (remove accents and extra spaces)
             const normalizeString = (str) => {
                 return str
                     .normalize('NFD')
@@ -78,17 +78,17 @@ export const init = (token) => {
                     .trim();
             };
 
-            // Iterar sobre cada criterio
+            // Iterate over each criterion
             rubricData.forEach(criterionData => {
                 const criterionName = criterionData.criterion;
                 const targetPoints = criterionData.levels[0].points;
                 const comment = criterionData.levels[0].comment;
 
-                // Buscar todos los criterios en la tabla
+                // Find all criteria in the table
                 const criterionRows = document.querySelectorAll('tr.criterion');
 
                 criterionRows.forEach(row => {
-                    // Obtener el nombre del criterio desde la celda description
+                    // Get the criterion name from the description cell
                     const descriptionCell = row.querySelector('td.description');
                     if (!descriptionCell) {
                         return;
@@ -96,9 +96,9 @@ export const init = (token) => {
 
                     const rowCriterionName = descriptionCell.textContent.trim();
 
-                    // Comparar nombres normalizados (sin tildes, case-insensitive)
+                    // Compare normalized names (no accents, case-insensitive)
                     if (normalizeString(rowCriterionName) === normalizeString(criterionName)) {
-                        // Buscar el nivel con los puntos correctos
+                        // Find the level with the correct points
                         const levelCells = row.querySelectorAll('td.level');
 
                         levelCells.forEach(levelCell => {
@@ -109,16 +109,16 @@ export const init = (token) => {
 
                             const points = parseInt(scoreSpan.textContent.trim());
 
-                            // Si coinciden los puntos, seleccionar este nivel
+                            // If points match, select this level
                             if (points === targetPoints) {
                                 const radioInput = levelCell.querySelector('input[type="radio"]');
                                 if (radioInput) {
                                     radioInput.checked = true;
 
-                                    // Actualizar aria-checked en el td
+                                    // Update aria-checked on the td
                                     levelCell.setAttribute('aria-checked', 'true');
 
-                                    // Remover aria-checked de otros niveles
+                                    // Remove aria-checked from other levels
                                     levelCells.forEach(otherCell => {
                                         if (otherCell !== levelCell) {
                                             otherCell.setAttribute('aria-checked', 'false');
@@ -130,7 +130,7 @@ export const init = (token) => {
                             }
                         });
 
-                        // Inyectar comentario en el textarea de remark
+                        // Inject comment into the remark textarea
                         const remarkTextarea = row.querySelector('td.remark textarea');
                         if (remarkTextarea && comment) {
                             remarkTextarea.value = comment;
@@ -144,12 +144,12 @@ export const init = (token) => {
         };
 
         const injectSimpleGrade = () => {
-            // Solo intentar si no hay rúbrica y hay una calificación
+            // Only try if there is no rubric and a grade exists
             if (rubricResponse || !grade) {
                 return false;
             }
 
-            // Buscar el campo de calificación simple
+            // Find the simple grade field
             const gradeInput = document.querySelector('#id_grade, input[name="grade"]');
 
             if (!gradeInput) {
@@ -158,14 +158,14 @@ export const init = (token) => {
 
             gradeInput.value = grade;
 
-            // Disparar evento change para que Moodle detecte el cambio
+            // Trigger change event so Moodle detects the update
             const event = new Event('change', { bubbles: true });
             gradeInput.dispatchEvent(event);
 
             return true;
         };
 
-        // Intentar inyectar con reintentos
+        // Try injection with retries
         let attempts = 0;
         const interval = setInterval(() => {
             attempts++;
@@ -178,17 +178,17 @@ export const init = (token) => {
 
                 if (rubricInjected) {
                     Notification.addNotification({
-                        message: 'Rúbrica inyectada exitosamente',
+                        message: 'Rubric successfully injected',
                         type: 'success'
                     });
                 } else if (gradeInjected) {
                     Notification.addNotification({
-                        message: 'Calificación inyectada exitosamente',
+                        message: 'Grade successfully injected',
                         type: 'success'
                     });
                 } else if (attempts > 20) {
                     Notification.addNotification({
-                        message: 'No se pudo inyectar la rúbrica después de 20 intentos',
+                        message: 'Failed to inject rubric after 20 attempts',
                         type: 'warning'
                     });
                 }
