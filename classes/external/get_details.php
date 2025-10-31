@@ -63,6 +63,12 @@ class get_details extends external_api {
 
         $record = $DB->get_record('local_assign_ai_pending', ['approval_token' => $params['token']], '*', MUST_EXIST);
 
+        $cm = get_coursemodule_from_id('assign', $record->assignmentid, 0, false, MUST_EXIST);
+        $context = \context_module::instance($cm->id);
+
+        self::validate_context($context);
+        require_capability('local/assign_ai:viewdetails', $context);
+
         return [
             'token' => $record->approval_token,
             'message' => $record->message,

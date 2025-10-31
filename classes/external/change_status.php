@@ -69,6 +69,12 @@ class change_status extends external_api {
             'approval_token' => $params['token'],
         ], '*', MUST_EXIST);
 
+        $cm = get_coursemodule_from_id('assign', $record->assignmentid, 0, false, MUST_EXIST);
+        $context = \context_module::instance($cm->id);
+
+        self::validate_context($context);
+        require_capability('local/assign_ai:changestatus', $context);
+
         $record->status = $params['action'];
         $record->timemodified = time();
         $DB->update_record('local_assign_ai_pending', $record);
