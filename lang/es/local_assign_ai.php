@@ -27,6 +27,9 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['actions'] = 'Acciones';
 $string['aistatus'] = 'Estado IA';
+$string['assign_ai:changestatus'] = 'Cambiar el estado de aprobación de IAs';
+$string['assign_ai:review'] = 'Revisar las sugerencias de IA para las tareas';
+$string['assign_ai:viewdetails'] = 'Ver detalles de comentarios de IA';
 $string['default_rubric_name'] = 'Rúbrica';
 $string['email'] = 'Correo electrónico';
 $string['error_airequest'] = 'Error al comunicarse con el servicio de IA: {$a}';
@@ -65,6 +68,8 @@ $string['saveapprove'] = 'Guardar y Aprobar';
 $string['status'] = 'Estado';
 $string['statusapprove'] = 'Aprobado';
 $string['statuspending'] = 'Pendiente';
+$string['statusrejected'] = 'Rechazado';
+$string['submission_draft'] = 'Borrador';
 $string['submission_new'] = 'Nuevo';
 $string['submission_none'] = 'Sin entrega';
 $string['submission_submitted'] = 'Enviado';

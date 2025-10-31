@@ -27,6 +27,9 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['actions'] = 'Actions';
 $string['aistatus'] = 'AI Status';
+$string['assign_ai:changestatus'] = 'Change AI approval status';
+$string['assign_ai:review'] = 'Review AI suggestions for assignments';
+$string['assign_ai:viewdetails'] = 'View AI feedback details';
 $string['default_rubric_name'] = 'Rubric';
 $string['email'] = 'Email';
 $string['error_airequest'] = 'Error communicating with the AI service: {$a}';
@@ -65,6 +68,8 @@ $string['saveapprove'] = 'Save and Approve';
 $string['status'] = 'Status';
 $string['statusapprove'] = 'Approved';
 $string['statuspending'] = 'Pending';
+$string['statusrejected'] = 'Rejected';
+$string['submission_draft'] = 'Draft';
 $string['submission_new'] = 'New';
 $string['submission_none'] = 'No submission';
 $string['submission_submitted'] = 'Submitted';
