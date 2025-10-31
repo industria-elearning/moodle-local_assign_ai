@@ -33,7 +33,7 @@ require_once($CFG->dirroot . '/grade/grading/lib.php');
  * @return array|null Simplified rubric array or null if no rubric is active.
  * @package local_assign_ai
  */
-function build_rubric_json(assign $assign) {
+function local_assign_ai_build_rubric_json(assign $assign) {
     global $DB;
 
     $context = $assign->get_context();
