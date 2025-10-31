@@ -1,11 +1,33 @@
 import Ajax from 'core/ajax';
 import Notification from 'core/notification';
+import { get_string as getString } from 'core/str';
 
-export const init = (token) => {
+/**
+ * Injects AI feedback, rubric, or grade into the assignment grading form.
+ *
+ * @param {string} token Approval token
+ */
+export const init = async (token) => {
     if (!token) {
         return;
     }
 
+    // Preload language strings
+    const [
+        strErrorParsing,
+        strRubricArray,
+        strRubricSuccess,
+        strGradeSuccess,
+        strRubricFailed
+    ] = await Promise.all([
+        getString('errorparsingrubric', 'local_assign_ai'),
+        getString('rubricmustarray', 'local_assign_ai'),
+        getString('rubricsuccess', 'local_assign_ai'),
+        getString('gradesuccess', 'local_assign_ai'),
+        getString('rubricfailed', 'local_assign_ai'),
+    ]);
+
+    // Retrieve AI-generated feedback details
     Ajax.call([{
         methodname: 'local_assign_ai_get_details',
         args: { token: token },
@@ -14,6 +36,7 @@ export const init = (token) => {
         const rubricResponse = data.rubric_response;
         const grade = data.grade; // Simple grade if there is no rubric
 
+        // --- Inject message into feedback editor ---
         const injectMessage = () => {
             const textarea = document.querySelector('#id_assignfeedbackcomments_editor, textarea[id^="id_feedbackcomments_"]');
 
@@ -23,13 +46,13 @@ export const init = (token) => {
 
             textarea.value = message;
 
-            // TinyMCE
+            // TinyMCE support
             if (window.tinymce && window.tinymce.get(textarea.id)) {
                 window.tinymce.get(textarea.id).setContent(message);
                 return true;
             }
 
-            // Atto
+            // Atto support
             if (window.M && window.M.editor_atto && window.M.editor_atto.getEditorForElement) {
                 const editor = window.M.editor_atto.getEditorForElement(textarea);
                 if (editor) {
@@ -41,6 +64,7 @@ export const init = (token) => {
             return false;
         };
 
+        // --- Inject rubric selections and comments ---
         const injectRubric = () => {
             if (!rubricResponse) {
                 return false;
@@ -53,7 +77,7 @@ export const init = (token) => {
                     : rubricResponse;
             } catch (e) {
                 Notification.addNotification({
-                    message: 'Error parsing rubric_response: ' + e.message,
+                    message: `${strErrorParsing} ${e.message}`,
                     type: 'error'
                 });
                 return false;
@@ -61,7 +85,7 @@ export const init = (token) => {
 
             if (!Array.isArray(rubricData)) {
                 Notification.addNotification({
-                    message: 'rubric_response must be an array',
+                    message: strRubricArray,
                     type: 'error'
                 });
                 return false;
@@ -69,7 +93,7 @@ export const init = (token) => {
 
             let injected = false;
 
-            // Function to normalize strings (remove accents and extra spaces)
+            // Normalize text (remove accents and extra spaces)
             const normalizeString = (str) => {
                 return str
                     .normalize('NFD')
@@ -84,11 +108,10 @@ export const init = (token) => {
                 const targetPoints = criterionData.levels[0].points;
                 const comment = criterionData.levels[0].comment;
 
-                // Find all criteria in the table
+                // Find all criteria rows
                 const criterionRows = document.querySelectorAll('tr.criterion');
 
                 criterionRows.forEach(row => {
-                    // Get the criterion name from the description cell
                     const descriptionCell = row.querySelector('td.description');
                     if (!descriptionCell) {
                         return;
@@ -96,9 +119,9 @@ export const init = (token) => {
 
                     const rowCriterionName = descriptionCell.textContent.trim();
 
-                    // Compare normalized names (no accents, case-insensitive)
+                    // Compare normalized names (case-insensitive, no accents)
                     if (normalizeString(rowCriterionName) === normalizeString(criterionName)) {
-                        // Find the level with the correct points
+                        // Find level cells
                         const levelCells = row.querySelectorAll('td.level');
 
                         levelCells.forEach(levelCell => {
@@ -109,16 +132,14 @@ export const init = (token) => {
 
                             const points = parseInt(scoreSpan.textContent.trim());
 
-                            // If points match, select this level
+                            // Select level with matching points
                             if (points === targetPoints) {
                                 const radioInput = levelCell.querySelector('input[type="radio"]');
                                 if (radioInput) {
                                     radioInput.checked = true;
 
-                                    // Update aria-checked on the td
+                                    // Update aria-checked attributes
                                     levelCell.setAttribute('aria-checked', 'true');
-
-                                    // Remove aria-checked from other levels
                                     levelCells.forEach(otherCell => {
                                         if (otherCell !== levelCell) {
                                             otherCell.setAttribute('aria-checked', 'false');
@@ -130,7 +151,7 @@ export const init = (token) => {
                             }
                         });
 
-                        // Inject comment into the remark textarea
+                        // Inject comment
                         const remarkTextarea = row.querySelector('td.remark textarea');
                         if (remarkTextarea && comment) {
                             remarkTextarea.value = comment;
@@ -143,29 +164,26 @@ export const init = (token) => {
             return injected;
         };
 
+        // --- Inject simple numeric grade ---
         const injectSimpleGrade = () => {
-            // Only try if there is no rubric and a grade exists
             if (rubricResponse || !grade) {
                 return false;
             }
 
-            // Find the simple grade field
             const gradeInput = document.querySelector('#id_grade, input[name="grade"]');
-
             if (!gradeInput) {
                 return false;
             }
 
             gradeInput.value = grade;
 
-            // Trigger change event so Moodle detects the update
+            // Trigger change event for Moodle detection
             const event = new Event('change', { bubbles: true });
             gradeInput.dispatchEvent(event);
 
             return true;
         };
 
-        // Try injection with retries
         let attempts = 0;
         const interval = setInterval(() => {
             attempts++;
@@ -178,17 +196,17 @@ export const init = (token) => {
 
                 if (rubricInjected) {
                     Notification.addNotification({
-                        message: 'Rubric successfully injected',
+                        message: strRubricSuccess,
                         type: 'success'
                     });
                 } else if (gradeInjected) {
                     Notification.addNotification({
-                        message: 'Grade successfully injected',
+                        message: strGradeSuccess,
                         type: 'success'
                     });
                 } else if (attempts > 20) {
                     Notification.addNotification({
-                        message: 'Failed to inject rubric after 20 attempts',
+                        message: strRubricFailed,
                         type: 'warning'
                     });
                 }

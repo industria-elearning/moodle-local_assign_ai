@@ -46,7 +46,7 @@ class update_response extends external_api {
     public static function execute_parameters() {
         return new external_function_parameters([
             'token' => new external_value(PARAM_TEXT, 'Approval token', VALUE_REQUIRED),
-            'message' => new external_value(PARAM_RAW, 'Mensaje actualizado', VALUE_REQUIRED),
+            'message' => new external_value(PARAM_RAW, 'Updated message', VALUE_REQUIRED),
         ]);
     }
 

@@ -57,7 +57,7 @@ function build_rubric_json(assign $assign) {
     }
 
     $rubric = [
-        'title' => $definition->name ?? 'Rubric',
+        'title' => $definition->name ?? get_string('default_rubric_name', 'local_assign_ai'),
         'description' => $definition->description ?? '',
         'criteria' => [],
     ];
