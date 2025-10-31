@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Configuración del plugin Assign AI.
+ * Assign AI plugin configuration.
  *
  * @package    local_assign_ai
  * @copyright  2025 Datacurso

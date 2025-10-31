@@ -46,7 +46,7 @@ class update_response extends external_api {
     public static function execute_parameters() {
         return new external_function_parameters([
             'token' => new external_value(PARAM_TEXT, 'Approval token', VALUE_REQUIRED),
-            'message' => new external_value(PARAM_RAW, 'Mensaje actualizado', VALUE_REQUIRED),
+            'message' => new external_value(PARAM_RAW, 'Updated message', VALUE_REQUIRED),
         ]);
     }
 
@@ -68,6 +68,12 @@ class update_response extends external_api {
         $record = $DB->get_record('local_assign_ai_pending', [
             'approval_token' => $params['token'],
         ], '*', MUST_EXIST);
+
+        $cm = get_coursemodule_from_id('assign', $record->assignmentid, 0, false, MUST_EXIST);
+        $context = \context_module::instance($cm->id);
+
+        self::validate_context($context);
+        require_capability('local/assign_ai:changestatus', $context);
 
         $record->message = $params['message'];
         $DB->update_record('local_assign_ai_pending', $record);

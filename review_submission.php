@@ -113,15 +113,15 @@ if ($goto === 'grader' && $userid) {
 }
 
 /**
- * Procesa la entrega de un usuario con IA y guarda como pendiente en local_assign_ai_pending.
+ * Processes a user's submission using AI and saves it as pending in local_assign_ai_pending.
  *
  * @package    local_assign_ai
- * @param assign $assign Objeto asignación.
- * @param stdClass $course Curso de Moodle.
- * @param stdClass $student Usuario estudiante.
- * @param moodle_database $DB Base de datos global.
- * @param bool $countmode Si es true, estamos en "Revisar todos".
- * @return string|null El token generado o existente, o null si no se procesa nada.
+ * @param assign $assign Assignment object.
+ * @param stdClass $course Moodle course.
+ * @param stdClass $student Student user.
+ * @param moodle_database $DB Global database.
+ * @param bool $countmode If true, we are in "Review all" mode.
+ * @return string|null The generated or existing token, or null if nothing is processed.
  */
 function process_submission_ai(assign $assign, $course, $student, $DB, $countmode = false) {
     global $CFG;
@@ -170,7 +170,7 @@ function process_submission_ai(assign $assign, $course, $student, $DB, $countmod
         'cmi_id' => (string)$cmid,
         'assignment_title' => $assignment->name,
         'assignment_description' => $assignment->intro,
-        'rubric' => build_rubric_json($assign),
+        'rubric' => local_assign_ai_build_rubric_json($assign),
         'userid' => (string)$student->id,
         'student_name' => fullname($student),
         'submission_assign' => $submissioncontent,

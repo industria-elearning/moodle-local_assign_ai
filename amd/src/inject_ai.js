@@ -1,19 +1,42 @@
 import Ajax from 'core/ajax';
 import Notification from 'core/notification';
+import { get_string as getString } from 'core/str';
 
-export const init = (token) => {
+/**
+ * Injects AI feedback, rubric, or grade into the assignment grading form.
+ *
+ * @param {string} token Approval token
+ */
+export const init = async (token) => {
     if (!token) {
         return;
     }
 
+    // Preload language strings
+    const [
+        strErrorParsing,
+        strRubricArray,
+        strRubricSuccess,
+        strGradeSuccess,
+        strRubricFailed
+    ] = await Promise.all([
+        getString('errorparsingrubric', 'local_assign_ai'),
+        getString('rubricmustarray', 'local_assign_ai'),
+        getString('rubricsuccess', 'local_assign_ai'),
+        getString('gradesuccess', 'local_assign_ai'),
+        getString('rubricfailed', 'local_assign_ai'),
+    ]);
+
+    // Retrieve AI-generated feedback details
     Ajax.call([{
         methodname: 'local_assign_ai_get_details',
         args: { token: token },
     }])[0].done(data => {
         const message = data.message;
         const rubricResponse = data.rubric_response;
-        const grade = data.grade; // Calificación simple si no hay rúbrica
+        const grade = data.grade; // Simple grade if there is no rubric
 
+        // --- Inject message into feedback editor ---
         const injectMessage = () => {
             const textarea = document.querySelector('#id_assignfeedbackcomments_editor, textarea[id^="id_feedbackcomments_"]');
 
@@ -23,13 +46,13 @@ export const init = (token) => {
 
             textarea.value = message;
 
-            // TinyMCE
+            // TinyMCE support
             if (window.tinymce && window.tinymce.get(textarea.id)) {
                 window.tinymce.get(textarea.id).setContent(message);
                 return true;
             }
 
-            // Atto
+            // Atto support
             if (window.M && window.M.editor_atto && window.M.editor_atto.getEditorForElement) {
                 const editor = window.M.editor_atto.getEditorForElement(textarea);
                 if (editor) {
@@ -41,6 +64,7 @@ export const init = (token) => {
             return false;
         };
 
+        // --- Inject rubric selections and comments ---
         const injectRubric = () => {
             if (!rubricResponse) {
                 return false;
@@ -53,7 +77,7 @@ export const init = (token) => {
                     : rubricResponse;
             } catch (e) {
                 Notification.addNotification({
-                    message: 'Error parsing rubric_response: ' + e.message,
+                    message: `${strErrorParsing} ${e.message}`,
                     type: 'error'
                 });
                 return false;
@@ -61,7 +85,7 @@ export const init = (token) => {
 
             if (!Array.isArray(rubricData)) {
                 Notification.addNotification({
-                    message: 'rubric_response debe ser un array',
+                    message: strRubricArray,
                     type: 'error'
                 });
                 return false;
@@ -69,7 +93,7 @@ export const init = (token) => {
 
             let injected = false;
 
-            // Función para normalizar strings (eliminar tildes y espacios extra)
+            // Normalize text (remove accents and extra spaces)
             const normalizeString = (str) => {
                 return str
                     .normalize('NFD')
@@ -78,17 +102,16 @@ export const init = (token) => {
                     .trim();
             };
 
-            // Iterar sobre cada criterio
+            // Iterate over each criterion
             rubricData.forEach(criterionData => {
                 const criterionName = criterionData.criterion;
                 const targetPoints = criterionData.levels[0].points;
                 const comment = criterionData.levels[0].comment;
 
-                // Buscar todos los criterios en la tabla
+                // Find all criteria rows
                 const criterionRows = document.querySelectorAll('tr.criterion');
 
                 criterionRows.forEach(row => {
-                    // Obtener el nombre del criterio desde la celda description
                     const descriptionCell = row.querySelector('td.description');
                     if (!descriptionCell) {
                         return;
@@ -96,9 +119,9 @@ export const init = (token) => {
 
                     const rowCriterionName = descriptionCell.textContent.trim();
 
-                    // Comparar nombres normalizados (sin tildes, case-insensitive)
+                    // Compare normalized names (case-insensitive, no accents)
                     if (normalizeString(rowCriterionName) === normalizeString(criterionName)) {
-                        // Buscar el nivel con los puntos correctos
+                        // Find level cells
                         const levelCells = row.querySelectorAll('td.level');
 
                         levelCells.forEach(levelCell => {
@@ -109,16 +132,14 @@ export const init = (token) => {
 
                             const points = parseInt(scoreSpan.textContent.trim());
 
-                            // Si coinciden los puntos, seleccionar este nivel
+                            // Select level with matching points
                             if (points === targetPoints) {
                                 const radioInput = levelCell.querySelector('input[type="radio"]');
                                 if (radioInput) {
                                     radioInput.checked = true;
 
-                                    // Actualizar aria-checked en el td
+                                    // Update aria-checked attributes
                                     levelCell.setAttribute('aria-checked', 'true');
-
-                                    // Remover aria-checked de otros niveles
                                     levelCells.forEach(otherCell => {
                                         if (otherCell !== levelCell) {
                                             otherCell.setAttribute('aria-checked', 'false');
@@ -130,7 +151,7 @@ export const init = (token) => {
                             }
                         });
 
-                        // Inyectar comentario en el textarea de remark
+                        // Inject comment
                         const remarkTextarea = row.querySelector('td.remark textarea');
                         if (remarkTextarea && comment) {
                             remarkTextarea.value = comment;
@@ -143,29 +164,26 @@ export const init = (token) => {
             return injected;
         };
 
+        // --- Inject simple numeric grade ---
         const injectSimpleGrade = () => {
-            // Solo intentar si no hay rúbrica y hay una calificación
             if (rubricResponse || !grade) {
                 return false;
             }
 
-            // Buscar el campo de calificación simple
             const gradeInput = document.querySelector('#id_grade, input[name="grade"]');
-
             if (!gradeInput) {
                 return false;
             }
 
             gradeInput.value = grade;
 
-            // Disparar evento change para que Moodle detecte el cambio
+            // Trigger change event for Moodle detection
             const event = new Event('change', { bubbles: true });
             gradeInput.dispatchEvent(event);
 
             return true;
         };
 
-        // Intentar inyectar con reintentos
         let attempts = 0;
         const interval = setInterval(() => {
             attempts++;
@@ -178,17 +196,17 @@ export const init = (token) => {
 
                 if (rubricInjected) {
                     Notification.addNotification({
-                        message: 'Rúbrica inyectada exitosamente',
+                        message: strRubricSuccess,
                         type: 'success'
                     });
                 } else if (gradeInjected) {
                     Notification.addNotification({
-                        message: 'Calificación inyectada exitosamente',
+                        message: strGradeSuccess,
                         type: 'success'
                     });
                 } else if (attempts > 20) {
                     Notification.addNotification({
-                        message: 'No se pudo inyectar la rúbrica después de 20 intentos',
+                        message: strRubricFailed,
                         type: 'warning'
                     });
                 }

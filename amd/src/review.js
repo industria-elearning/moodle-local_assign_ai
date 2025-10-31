@@ -51,8 +51,8 @@ export const init = () => {
                         toolbar: base.toolbar ?? 'undo redo | bold italic underline | bullist numlist | link | removeformat | code',
                     });
                 } catch (err) {
-                    // Fallback silencioso al textarea normal
-                    // console.warn('Tiny no disponible:', err);
+                    // Silent fallback to normal textarea
+                    // console.warn('Tiny not available:', err);
                 }
 
                 const getContent = () => {
@@ -60,7 +60,7 @@ export const init = () => {
                     return inst ? inst.getContent() : textarea.value;
                 };
 
-                // Guardar
+                // Save
                 root.on('click', '.save-ai', e => {
                     e.preventDefault();
                     const newMessage = getContent();
@@ -71,7 +71,7 @@ export const init = () => {
                         .fail(Notification.exception);
                 });
 
-                // Guardar y aprobar
+                // Save and approve
                 root.on('click', '.approve-ai', e => {
                     e.preventDefault();
                     const newMessage = getContent();
@@ -87,7 +87,7 @@ export const init = () => {
                     }).fail(Notification.exception);
                 });
 
-                // Rechazar
+                // Reject
                 root.on('click', '.reject-ai', e => {
                     e.preventDefault();
                     Ajax.call([{
@@ -97,7 +97,7 @@ export const init = () => {
                         .fail(Notification.exception);
                 });
 
-                // Destruye la instancia al cerrar el modal
+                // Destroy TinyMCE instance when modal closes
                 root.on(ModalEvents.hidden, () => {
                     const inst = tinymce && tinymce.get(textarea.id);
                     if (inst) { inst.remove(); }
