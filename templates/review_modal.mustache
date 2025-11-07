@@ -1,0 +1,36 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_assign_ai/review
+
+    Template for AI review modal body.
+
+    Context variables:
+    - message: (string) AI-generated text
+    - token: (string) Token for the submission
+    - savelabel: (string) Label for the Save button
+    - saveapprovelabel: (string) Label for the Save and Approve button
+}}
+
+<div class="local-assign-ai-modal">
+    <textarea id="airesponse-edit" class="form-control" rows="8">{{{message}}}</textarea>
+
+    <div class="ai-buttons">
+        <button class="btn btn-success save-ai" data-token="{{token}}">{{savelabel}}</button>
+        <button class="btn btn-primary approve-ai" data-token="{{token}}">{{saveapprovelabel}}</button>
+    </div>
+</div>

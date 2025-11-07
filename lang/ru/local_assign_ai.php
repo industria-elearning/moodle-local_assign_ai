@@ -27,6 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['actions'] = 'Действия';
 $string['aistatus'] = 'Статус ИИ';
+$string['altlogo'] = 'Логотип Datacurso';
 $string['assign_ai:changestatus'] = 'Изменить статус одобрения ИИ';
 $string['assign_ai:review'] = 'Проверить предложения ИИ для заданий';
 $string['assign_ai:viewdetails'] = 'Просмотреть детали комментариев ИИ';

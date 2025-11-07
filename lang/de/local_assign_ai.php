@@ -27,6 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['actions'] = 'Aktionen';
 $string['aistatus'] = 'KI-Status';
+$string['altlogo'] = 'Datacurso-Logo';
 $string['assign_ai:changestatus'] = 'Genehmigungsstatus der KI ändern';
 $string['assign_ai:review'] = 'KI-Vorschläge für Aufgaben überprüfen';
 $string['assign_ai:viewdetails'] = 'KI-Kommentardetails anzeigen';

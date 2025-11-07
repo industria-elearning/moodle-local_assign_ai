@@ -91,8 +91,8 @@ class update_response extends external_api {
      */
     public static function execute_returns() {
         return new external_single_structure([
-            'status' => new external_value(PARAM_TEXT, 'Estado de la operación'),
-            'message' => new external_value(PARAM_RAW, 'Mensaje actualizado'),
+            'status' => new external_value(PARAM_TEXT, 'Operation status'),
+            'message' => new external_value(PARAM_RAW, 'Updated message'),
         ]);
     }
 }

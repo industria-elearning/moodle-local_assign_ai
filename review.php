@@ -258,6 +258,7 @@ try {
     $templatecontext = [
         'rows' => $rows,
         'headerlogo' => $logocontext,
+        'alttext' => get_string('altlogo', 'local_assign_ai'),
     ];
 
     echo $OUTPUT->render_from_template('local_assign_ai/review_table', $templatecontext);

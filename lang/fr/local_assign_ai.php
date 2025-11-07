@@ -27,6 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['actions'] = 'Actions';
 $string['aistatus'] = 'Statut IA';
+$string['altlogo'] = 'Logo Datacurso';
 $string['assign_ai:changestatus'] = 'Changer le statut d’approbation de l’IA';
 $string['assign_ai:review'] = 'Examiner les suggestions d’IA pour les devoirs';
 $string['assign_ai:viewdetails'] = 'Voir les détails des commentaires de l’IA';

@@ -1,4 +1,3 @@
-/* Contenedor de botones en la columna Acciones */
 .local_assign_ai_action-buttons {
     display: flex;
     gap: 8px;
@@ -6,7 +5,6 @@
     flex-wrap: wrap;
 }
 
-/* ====== Logo ====== */
 .local_assign_ai-logo-wrapper {
     display: flex;
     justify-content: flex-end;
@@ -31,7 +29,6 @@
     transform: scale(1.05);
 }
 
-/* Ajuste para pantallas pequeñas */
 @media (max-width: 768px) {
     .local_assign_ai-logo-wrapper {
         justify-content: center;
@@ -44,7 +41,6 @@
     }
 }
 
-/* Ajuste para pantallas pequeñas */
 @media (max-width: 768px) {
     .local_assign_ai_action-buttons  {
         flex-direction: column;
