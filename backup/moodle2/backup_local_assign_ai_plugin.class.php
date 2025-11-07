@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - http://moodle.org/
+// This file is part of Moodle - http://moodle.org/.
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,25 +12,35 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
  * Backup handler for the local_assign_ai plugin.
  *
- * Defines the structure and data to include when backing up assignment-related
- * AI records and pending approval data from the local_assign_ai_pending table.
+ * Defines the structure and data to include when backing up AI-generated
+ * reviews and pending approval records from the `local_assign_ai_pending` table.
  *
  * @package    local_assign_ai
  * @category   backup
  * @copyright  2025 Datacurso
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+/**
+ * Backup subplugin class for the local_assign_ai plugin.
+ *
+ * Handles the inclusion of AI-generated assignment review data
+ * in the Moodle backup structure.
+ *
+ * @package    local_assign_ai
+ * @category   backup
+ */
 class backup_local_assign_ai_plugin extends backup_local_plugin {
     /**
-     * Define the structure of the data included in the backup.
+     * Defines the structure of the data included in the assignment backup.
      *
-     * This method specifies which database tables and fields are exported
-     * for the local_assign_ai plugin as part of the assignment backup process.
+     * This creates an <aipending> node under the assignment activity XML,
+     * containing all AI review data linked to that specific instance.
      *
      * @return backup_subplugin_element
      */
@@ -41,8 +51,9 @@ class backup_local_assign_ai_plugin extends backup_local_plugin {
         // Wrapper element for this plugin's data.
         $pluginwrapper = new backup_nested_element($this->get_recommended_name());
 
-        // Define the table data structure for pending AI records.
-        $pending = new backup_nested_element('assign_ai_pending', ['id'], [
+        // Define main nodes.
+        $aipending = new backup_nested_element('aipending');
+        $aipendingrecord = new backup_nested_element('aipending_record', ['id'], [
             'courseid',
             'assignmentid',
             'title',
@@ -52,26 +63,33 @@ class backup_local_assign_ai_plugin extends backup_local_plugin {
             'rubric_response',
             'status',
             'approval_token',
+            'timemodified',
         ]);
 
-        // Build the XML tree.
+        // Build XML hierarchy.
         $plugin->add_child($pluginwrapper);
-        $pluginwrapper->add_child($pending);
+        $pluginwrapper->add_child($aipending);
+        $aipending->add_child($aipendingrecord);
 
-        // Define the data source.
-        $pending->set_source_table('local_assign_ai_pending', [
-            'assignmentid' => backup::VAR_ACTIVITYID,
-        ]);
+        // Include AI data only if user info is backed up.
+        if ($this->get_setting_value('userinfo')) {
+            $aipendingrecord->set_source_table('local_assign_ai_pending', [
+                'assignmentid' => backup::VAR_ACTIVITYID,
+            ]);
+
+            // Annotate user id for mapping during restore.
+            $aipendingrecord->annotate_ids('user', 'userid');
+        }
 
         return $plugin;
     }
 
     /**
-     * Define any course-level backup structure if required (none here).
+     * Define any course-level backup structure (none for this plugin).
      *
      * @return void
      */
     protected function define_course_subplugin_structure() {
-        // No course-level data required.
+        // No course-level data to back up.
     }
 }
