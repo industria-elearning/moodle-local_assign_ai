@@ -37,78 +37,17 @@ class client {
      * @param array $payload The request payload.
      * @return array The AI response.
      */
-    // public static function send_to_ai($payload) {
-    // $payload = utils::normalize_payload($payload);
-
-    // $client = new ai_services_api();
-
-    // $response = $client->request('POST', '/assign/answer', $payload);
-
-    // return [
-    // 'reply'  => $response['reply'],
-    // 'grade'  => $response['grade'],
-    // 'rubric' => $response['rubric'],
-    // ];
-    // }
-
     public static function send_to_ai($payload) {
         $payload = utils::normalize_payload($payload);
 
+        $client = new ai_services_api();
+
+        $response = $client->request('POST', '/assign/answer', $payload);
+
         return [
-           'reply' => json_encode($payload, JSON_PRETTY_PRINT),
-           'grade' => 14,
-           "rubric" => [
-               [
-                   "criterion" => "Structure",
-                   "levels" => [
-                       [
-                           "points" => 3,
-                           "comment" => "Excelente",
-                       ],
-                   ],
-               ],
-               [
-                   "criterion" => "Argumentation",
-                   "levels" => [
-                       [
-                           "points" => 1,
-                           "comment" => "A mejorar",
-                       ],
-                   ],
-               ],
-               [
-                   "criterion" => "Use of fonts",
-                   "levels" => [
-                       [
-                           "points" => 3,
-                           "comment" => "Excelente",
-                       ],
-                   ],
-               ],
-               [
-                   "criterion" => "Drafting",
-                   "levels" => [
-                       [
-                           "points" => 4,
-                           "comment" => "Super Excelente",
-                       ],
-                   ],
-               ],
-               [
-                   "criterion" => "Originality",
-                   "levels" => [
-                       [
-                           "points" => 3,
-                           "comment" => "Super Excelente",
-                       ],
-                   ],
-               ],
-           ],
-           'meta' => [
-               'provider' => 'mock',
-               'model' => 'gpt-5-mini',
-               'userid' => $payload['student']['id'] ?? null,
-           ],
+        'reply'  => $response['reply'],
+        'grade'  => $response['grade'],
+        'rubric' => $response['rubric'],
         ];
     }
 }

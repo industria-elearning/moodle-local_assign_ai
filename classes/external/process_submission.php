@@ -14,6 +14,19 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
+/**
+ * External function for processing assignment submissions with AI.
+ *
+ * Handles the submission of one or multiple student assignments to the
+ * AI grading service. If the "all" parameter is enabled, the process is queued
+ * as an ad-hoc Moodle task and handled asynchronously by the cron system.
+ *
+ * @package     local_assign_ai
+ * @category    external
+ * @copyright   2025 Datacurso
+ * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace local_assign_ai\external;
 
 defined('MOODLE_INTERNAL') || die();
@@ -28,15 +41,45 @@ use external_single_structure;
 use external_value;
 use local_assign_ai\api\client;
 
+/**
+ * External API class to process assignment submissions via AI.
+ *
+ * Provides functionality for both single-user and bulk (all users)
+ * submission processing. For "all" submissions, the function creates
+ * a queued Moodle task to handle the operation asynchronously.
+ */
 class process_submission extends external_api {
+    /**
+     * Returns the parameters required for the external function.
+     *
+     * @return external_function_parameters
+     */
     public static function execute_parameters() {
         return new external_function_parameters([
             'cmid' => new external_value(PARAM_INT, 'Course module ID', VALUE_REQUIRED),
             'userid' => new external_value(PARAM_INT, 'User ID (0 for all)', VALUE_DEFAULT, 0),
-            'all' => new external_value(PARAM_BOOL, 'Process all users', VALUE_DEFAULT, false),
+            'all' => new external_value(
+                PARAM_BOOL,
+                'Whether to process all users (true) or a single one (false)',
+                VALUE_DEFAULT,
+                false
+            ),
+
         ]);
     }
 
+    /**
+     * Executes the AI submission processing.
+     *
+     * When called with the "all" flag, an ad-hoc task is created to handle
+     * all student submissions asynchronously. If a specific user ID is
+     * provided, the function processes that submission immediately.
+     *
+     * @param int $cmid The course module ID.
+     * @param int $userid The user ID (0 for all users).
+     * @param bool $all Whether to process all submissions (queued task) or a single one.
+     * @return array An associative array containing the processing result.
+     */
     public static function execute($cmid, $userid = 0, $all = false) {
         global $DB, $CFG;
 
@@ -53,7 +96,7 @@ class process_submission extends external_api {
         $processed = 0;
         $token = null;
 
-        // ✅ Si el usuario quiere revisar todos, lo encolamos como tarea.
+        // If processing all submissions → queue background task.
         if ($all) {
             $task = new \local_assign_ai\task\process_all_submissions();
             $task->set_custom_data([
@@ -70,10 +113,10 @@ class process_submission extends external_api {
             ];
         }
 
-        // ✅ Si es solo un usuario específico, procesamos directamente.
+        // Process a single user submission directly.
         if ($userid) {
             $student = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
-            $token = self::process_submission_ai($assign, $course, $student, $DB, false);
+            $token = self::process_submission_ai($assign, $course, $student, $DB);
             if ($token) {
                 $processed++;
             }
@@ -86,16 +129,33 @@ class process_submission extends external_api {
         ];
     }
 
+    /**
+     * Returns the structure of the function’s response.
+     *
+     * @return external_single_structure
+     */
     public static function execute_returns() {
         return new external_single_structure([
-            'status' => new external_value(PARAM_TEXT, 'Status message'),
+            'status' => new external_value(PARAM_TEXT, 'Processing status (ok, queued, or error)'),
             'processed' => new external_value(PARAM_INT, 'Number of processed submissions'),
-            'token' => new external_value(PARAM_TEXT, 'Approval token'),
+            'token' => new external_value(PARAM_TEXT, 'Approval token if available'),
         ]);
     }
 
     /**
-     * Internal helper to process a single or all AI submissions.
+     * Internal helper to process a single assignment submission via AI.
+     *
+     * This method compiles the submission data (either file or online text),
+     * sends it to the AI service, and stores the pending result in the
+     * `local_assign_ai_pending` table. If a record already exists for the
+     * same user and assignment, it simply returns the existing token.
+     *
+     * @param \assign $assign The assignment instance.
+     * @param \stdClass $course The course object.
+     * @param \stdClass $student The student whose submission is processed.
+     * @param \moodle_database $DB Moodle database global.
+     * @param bool $countmode Whether to run in counting-only mode (default false).
+     * @return string|null The approval token generated or found, or null on failure.
      */
     public static function process_submission_ai(\assign $assign, $course, $student, $DB, $countmode = false) {
         global $CFG;
@@ -108,6 +168,7 @@ class process_submission extends external_api {
         $assignment = $assign->get_instance();
         $cmid = $assign->get_course_module()->id;
 
+        // Retrieve submission content (files or online text).
         $fs = get_file_storage();
         $files = $fs->get_area_files(
             $assign->get_context()->id,
@@ -126,6 +187,7 @@ class process_submission extends external_api {
             }
         }
 
+        // Prepare payload for the AI service.
         $payload = [
             'site_id' => md5($CFG->wwwroot),
             'course_id' => (string)$course->id,
@@ -141,6 +203,7 @@ class process_submission extends external_api {
             'maximum_grade' => (int)$assignment->grade,
         ];
 
+        // Send to AI client.
         try {
             $data = client::send_to_ai($payload);
         } catch (\Throwable $e) {
@@ -148,6 +211,7 @@ class process_submission extends external_api {
             return null;
         }
 
+        // Check if record already exists.
         $existing = $DB->get_record('local_assign_ai_pending', [
             'courseid' => $course->id,
             'assignmentid' => $cmid,
@@ -158,6 +222,7 @@ class process_submission extends external_api {
             return $existing->approval_token;
         }
 
+        // Create new pending record.
         $token = bin2hex(random_bytes(16));
         $record = (object)[
             'courseid' => $course->id,

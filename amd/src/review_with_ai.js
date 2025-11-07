@@ -54,17 +54,17 @@ export const init = async () => {
             const userid = parseInt(button.dataset.userid || 0);
             const all = button.dataset.all === '1';
 
-            // Guardar el HTML original para restaurarlo luego
+            // Save the original HTML to restore it later
             const originalHTML = button.innerHTML;
 
-            // Mostrar spinner con texto
+            // Show spinner with text
             button.innerHTML = `
                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                 ${strProcessing}
             `;
             button.disabled = true;
 
-            // Llamada AJAX al servicio web
+            // AJAX call to the web service
             Ajax.call([{
                 methodname: 'local_assign_ai_process_submission',
                 args: { cmid: cmid, userid: userid, all: all },
