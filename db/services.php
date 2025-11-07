@@ -49,4 +49,12 @@ $functions = [
         'type'        => 'write',
         'ajax'        => true,
     ],
+    'local_assign_ai_process_submission' => [
+        'classname'   => 'local_assign_ai\external\process_submission',
+        'methodname'  => 'execute',
+        'description' => 'Process assignment submissions using AI.',
+        'type'        => 'write',
+        'ajax'        => true,
+        'capabilities' => 'local/assign_ai:review',
+    ],
 ];

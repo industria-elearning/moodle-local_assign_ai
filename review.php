@@ -47,6 +47,7 @@ try {
     $PAGE->set_title(get_string('reviewwithai', 'local_assign_ai'));
     $PAGE->set_heading(format_string($course->fullname));
     $PAGE->requires->js_call_amd('local_assign_ai/review', 'init');
+    $PAGE->requires->js_call_amd('local_assign_ai/review_with_ai', 'init');
     $PAGE->requires->css('/local/assign_ai/styles/review.css');
 
     $PAGE->activityheader->disable();
@@ -87,10 +88,15 @@ try {
         ]);
     } else {
         // Active button.
-        echo html_writer::link(
-            $reviewallurl,
+        echo html_writer::tag(
+            'button',
             get_string('reviewall', 'local_assign_ai'),
-            ['class' => 'btn btn-warning']
+            [
+                'type' => 'button',
+                'class' => 'btn btn-warning js-review-ai',
+                'data-cmid' => $cmid,
+                'data-all' => 1,
+            ]
         );
     }
     echo html_writer::end_div();
@@ -228,10 +234,15 @@ try {
                 ['class' => 'btn btn-warning', 'disabled' => 'disabled']
             );
         } else {
-            $reviewbtn = html_writer::link(
-                $reviewurl,
+            $reviewbtn = html_writer::tag(
+                'button',
                 get_string('review', 'local_assign_ai'),
-                ['class' => 'btn btn-warning']
+                [
+                'type' => 'button',
+                'class' => 'btn btn-warning js-review-ai',
+                'data-cmid' => $cmid,
+                'data-userid' => $student->id,
+                ]
             );
         }
 
