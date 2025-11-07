@@ -14,8 +14,9 @@
     You should have received a copy of the GNU General Public License
     along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 }}
+
 {{!
-    @template local_assign_ai/review
+    @template local_assign_ai/review_modal
 
     Template for AI review modal body.
 
@@ -24,13 +25,25 @@
     - token: (string) Token for the submission
     - savelabel: (string) Label for the Save button
     - saveapprovelabel: (string) Label for the Save and Approve button
+
+    Example context (for Mustache Lint):
+    {
+        "message": "This is an example AI-generated review message.",
+        "token": "exampletoken123",
+        "savelabel": "Save",
+        "saveapprovelabel": "Save and Approve"
+    }
 }}
 
 <div class="local-assign-ai-modal">
     <textarea id="airesponse-edit" class="form-control" rows="8">{{{message}}}</textarea>
 
-    <div class="ai-buttons">
-        <button class="btn btn-success save-ai" data-token="{{token}}">{{savelabel}}</button>
-        <button class="btn btn-primary approve-ai" data-token="{{token}}">{{saveapprovelabel}}</button>
+    <div class="ai-buttons mt-3">
+        <button class="btn btn-success save-ai" data-token="{{token}}">
+            {{savelabel}}
+        </button>
+        <button class="btn btn-primary approve-ai" data-token="{{token}}">
+            {{saveapprovelabel}}
+        </button>
     </div>
 </div>
