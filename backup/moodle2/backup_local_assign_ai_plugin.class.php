@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - http://moodle.org/.
+// This file is part of Moodle - https://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,45 +15,30 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Backup handler for the local_assign_ai plugin.
- *
- * Defines the structure and data to include when backing up AI-generated
- * reviews and pending approval records from the `local_assign_ai_pending` table.
+ * Backup plugin for local_assign_ai.
  *
  * @package    local_assign_ai
  * @category   backup
  * @copyright  2025 Datacurso
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
-/**
- * Backup subplugin class for the local_assign_ai plugin.
- *
- * Handles the inclusion of AI-generated assignment review data
- * in the Moodle backup structure.
- *
- * @package    local_assign_ai
- * @category   backup
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class backup_local_assign_ai_plugin extends backup_local_plugin {
     /**
-     * Defines the structure of the data included in the assignment backup.
+     * Define the structure to include in the course backup.
      *
-     * This creates an <aipending> node under the assignment activity XML,
-     * containing all AI review data linked to that specific instance.
-     *
-     * @return backup_subplugin_element
+     * @return backup_plugin_element
      */
-    protected function define_assign_subplugin_structure() {
-        // Reference to <plugin> node in the backup XML.
-        $plugin = $this->get_subplugin_element();
-
-        // Wrapper element for this plugin's data.
+    protected function define_course_plugin_structure() {
+        $plugin = $this->get_plugin_element(null);
         $pluginwrapper = new backup_nested_element($this->get_recommended_name());
+        $plugin->add_child($pluginwrapper);
 
-        // Define main nodes.
-        $aipending = new backup_nested_element('aipending');
-        $aipendingrecord = new backup_nested_element('aipending_record', ['id'], [
+        // Container for all pending and approved AI feedback.
+        $pendings = new backup_nested_element('assign_ai_pendings');
+        $pluginwrapper->add_child($pendings);
+
+        // Each record (pending or approved).
+        $pending = new backup_nested_element('assign_ai_pending', ['id'], [
             'courseid',
             'assignmentid',
             'title',
@@ -63,33 +48,24 @@ class backup_local_assign_ai_plugin extends backup_local_plugin {
             'rubric_response',
             'status',
             'approval_token',
+            'timecreated',
             'timemodified',
+            'approved_at',
         ]);
+        $pendings->add_child($pending);
 
-        // Build XML hierarchy.
-        $plugin->add_child($pluginwrapper);
-        $pluginwrapper->add_child($aipending);
-        $aipending->add_child($aipendingrecord);
+        // Get all records (any status) for this course.
+        $pending->set_source_sql('
+            SELECT p.*
+              FROM {local_assign_ai_pending} p
+             WHERE p.courseid = ?
+        ', [backup::VAR_COURSEID]);
 
-        // Include AI data only if user info is backed up.
-        if ($this->get_setting_value('userinfo')) {
-            $aipendingrecord->set_source_table('local_assign_ai_pending', [
-                'assignmentid' => backup::VAR_ACTIVITYID,
-            ]);
-
-            // Annotate user id for mapping during restore.
-            $aipendingrecord->annotate_ids('user', 'userid');
-        }
+        // Map dependent entities.
+        $pending->annotate_ids('assign', 'assignmentid');
+        $pending->annotate_ids('user', 'userid');
+        $pending->annotate_ids('course', 'courseid');
 
         return $plugin;
-    }
-
-    /**
-     * Define any course-level backup structure (none for this plugin).
-     *
-     * @return void
-     */
-    protected function define_course_subplugin_structure() {
-        // No course-level data to back up.
     }
 }
