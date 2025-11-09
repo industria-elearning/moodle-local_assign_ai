@@ -14,6 +14,17 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
+namespace local_assign_ai\task;
+
+defined('MOODLE_INTERNAL') || die();
+
+require_once($CFG->dirroot . '/mod/assign/locallib.php');
+require_once($CFG->dirroot . '/local/assign_ai/locallib.php');
+require_once($CFG->libdir . '/externallib.php');
+
+use core\task\adhoc_task;
+use local_assign_ai\api\client;
+
 /**
  * Ad-hoc task for processing all assignment submissions with AI.
  *
@@ -27,25 +38,6 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace local_assign_ai\task;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->dirroot . '/mod/assign/locallib.php');
-require_once($CFG->dirroot . '/local/assign_ai/locallib.php');
-require_once($CFG->libdir . '/externallib.php');
-
-use core\task\adhoc_task;
-use local_assign_ai\api\client;
-
-/**
- * Ad-hoc task to process all AI submissions for a given assignment.
- *
- * The task iterates through all enrolled students with submission capability,
- * retrieves their submitted content, and sends it to the AI evaluation endpoint.
- * Each result is stored in the `local_assign_ai_pending` table until the teacher
- * approves or updates the grade.
- */
 class process_all_submissions extends adhoc_task {
     /**
      * Executes the queued ad-hoc task.

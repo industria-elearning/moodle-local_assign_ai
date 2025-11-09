@@ -14,14 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * Privacy subsystem implementation for local_forum_ai.
- *
- * @package    local_assign_ai
- * @copyright  2025 Datacurso
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace local_assign_ai\privacy;
 
 use core_privacy\local\request\core_userlist_provider;

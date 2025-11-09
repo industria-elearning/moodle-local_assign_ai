@@ -14,19 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-/**
- * External function for processing assignment submissions with AI.
- *
- * Handles the submission of one or multiple student assignments to the
- * AI grading service. If the "all" parameter is enabled, the process is queued
- * as an ad-hoc Moodle task and handled asynchronously by the cron system.
- *
- * @package     local_assign_ai
- * @category    external
- * @copyright   2025 Datacurso
- * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace local_assign_ai\external;
 
 defined('MOODLE_INTERNAL') || die();
@@ -42,11 +29,16 @@ use external_value;
 use local_assign_ai\api\client;
 
 /**
- * External API class to process assignment submissions via AI.
+ * External function for processing assignment submissions with AI.
  *
- * Provides functionality for both single-user and bulk (all users)
- * submission processing. For "all" submissions, the function creates
- * a queued Moodle task to handle the operation asynchronously.
+ * Handles the submission of one or multiple student assignments to the
+ * AI grading service. If the "all" parameter is enabled, the process is queued
+ * as an ad-hoc Moodle task and handled asynchronously by the cron system.
+ *
+ * @package     local_assign_ai
+ * @category    external
+ * @copyright   2025 Datacurso
+ * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class process_submission extends external_api {
     /**

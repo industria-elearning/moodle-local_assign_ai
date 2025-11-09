@@ -14,15 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-/**
- * External function to retrieve details of a pending AI assignment approval.
- *
- * @package     local_assign_ai
- * @category    external
- * @copyright   2025 Datacurso
- * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace local_assign_ai\external;
 
 defined('MOODLE_INTERNAL') || die();
@@ -36,8 +27,14 @@ use external_value;
 use external_multiple_structure;
 
 /**
- * External API to get details of a pending approval.
+ * External function to retrieve details of a pending AI assignment approval.
+ *
+ * @package     local_assign_ai
+ * @category    external
+ * @copyright   2025 Datacurso
+ * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
 class get_details extends external_api {
     /**
      * Returns the description of the parameters for this external function.

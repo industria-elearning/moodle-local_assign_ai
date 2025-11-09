@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
+namespace local_assign_ai;
+
 /**
  * Utility functions for local_assign_ai.
  *
@@ -22,11 +24,6 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace local_assign_ai;
-
-/**
- * Helper utilities for local_assign_ai plugin.
- */
 class utils {
     /**
      * Mapping of accented and special characters to plain UTF-8 equivalents.

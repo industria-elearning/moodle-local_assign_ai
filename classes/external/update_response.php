@@ -14,15 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-/**
- * External function to update the response message of a pending approval.
- *
- * @package     local_assign_ai
- * @category    external
- * @copyright   2025 Datacurso
- * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace local_assign_ai\external;
 
 defined('MOODLE_INTERNAL') || die();
@@ -35,7 +26,12 @@ use external_value;
 use external_single_structure;
 
 /**
- * External API to update the response of a pending approval.
+ * External function to update the response message of a pending approval.
+ *
+ * @package     local_assign_ai
+ * @category    external
+ * @copyright   2025 Datacurso
+ * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class update_response extends external_api {
     /**

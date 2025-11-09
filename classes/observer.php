@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
+namespace local_assign_ai;
+
 /**
  * Event observers for local_assign_ai.
  *
@@ -21,12 +23,6 @@
  * @category    event
  * @copyright   2025 Datacurso
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
-namespace local_assign_ai;
-
-/**
- * Observer class for handling assignment events.
  */
 class observer {
     /**
