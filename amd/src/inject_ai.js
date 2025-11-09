@@ -40,13 +40,11 @@ export const init = async (token) => {
         strErrorParsing,
         strRubricArray,
         strRubricSuccess,
-        strGradeSuccess,
         strRubricFailed
     ] = await Promise.all([
         getString('errorparsingrubric', 'local_assign_ai'),
         getString('rubricmustarray', 'local_assign_ai'),
         getString('rubricsuccess', 'local_assign_ai'),
-        getString('gradesuccess', 'local_assign_ai'),
         getString('rubricfailed', 'local_assign_ai'),
     ]);
 
@@ -55,13 +53,18 @@ export const init = async (token) => {
         methodname: 'local_assign_ai_get_details',
         args: { token: token },
     }])[0].done(data => {
-        const message = data.message;
-        const rubricResponse = data.rubric_response;
-        const grade = data.grade; // Simple grade if there is no rubric
+        const message = data.message ?? data.reply ?? '';
+        const rubricResponse = data.rubric_response ?? data.rubric ?? null;
+        const grade = data.grade ?? null;
 
-        // --- Inject message into feedback editor ---
+        /**
+         * Injects AI message into feedback editor.
+         * @returns {boolean} True if message was injected successfully
+         */
         const injectMessage = () => {
-            const textarea = document.querySelector('#id_assignfeedbackcomments_editor, textarea[id^="id_feedbackcomments_"]');
+            const textarea = document.querySelector(
+                '#id_assignfeedbackcomments_editor, textarea[id^="id_feedbackcomments_"]'
+            );
 
             if (!textarea) {
                 return false;
@@ -84,10 +87,13 @@ export const init = async (token) => {
                 }
             }
 
-            return false;
+            return textarea.value === message;
         };
 
-        // --- Inject rubric selections and comments ---
+        /**
+         * Injects rubric selections and comments.
+         * @returns {boolean} True if rubric was injected successfully
+         */
         const injectRubric = () => {
             if (!rubricResponse) {
                 return false;
@@ -116,7 +122,7 @@ export const init = async (token) => {
 
             let injected = false;
 
-            // Normalize text (remove accents and extra spaces)
+            // Normalize text
             const normalizeString = (str) => {
                 return str
                     .normalize('NFD')
@@ -125,59 +131,98 @@ export const init = async (token) => {
                     .trim();
             };
 
-            // Iterate over each criterion
-            rubricData.forEach(criterionData => {
+            // Find all criteria rows
+            const criterionRows = document.querySelectorAll('tr.criterion');
+
+            if (criterionRows.length === 0) {
+                return false;
+            }
+
+            // Process each criterion from AI data
+            rubricData.forEach((criterionData) => {
                 const criterionName = criterionData.criterion;
                 const targetPoints = criterionData.levels[0].points;
                 const comment = criterionData.levels[0].comment;
 
-                // Find all criteria rows
-                const criterionRows = document.querySelectorAll('tr.criterion');
-
-                criterionRows.forEach(row => {
+                // Find matching criterion row in DOM
+                criterionRows.forEach((row) => {
                     const descriptionCell = row.querySelector('td.description');
                     if (!descriptionCell) {
                         return;
                     }
 
                     const rowCriterionName = descriptionCell.textContent.trim();
+                    const normalizedRow = normalizeString(rowCriterionName);
+                    const normalizedTarget = normalizeString(criterionName);
 
                     // Compare normalized names (case-insensitive, no accents)
-                    if (normalizeString(rowCriterionName) === normalizeString(criterionName)) {
+                    if (normalizedRow === normalizedTarget) {
                         // Find level cells
                         const levelCells = row.querySelectorAll('td.level');
 
-                        levelCells.forEach(levelCell => {
+                        levelCells.forEach((levelCell) => {
                             const scoreSpan = levelCell.querySelector('.scorevalue');
                             if (!scoreSpan) {
                                 return;
                             }
 
-                            const points = parseInt(scoreSpan.textContent.trim());
+                            const points = parseInt(scoreSpan.textContent.trim(), 10);
 
                             // Select level with matching points
                             if (points === targetPoints) {
                                 const radioInput = levelCell.querySelector('input[type="radio"]');
-                                if (radioInput) {
+
+                                if (!radioInput) {
+                                    return;
+                                }
+
+                                // Simulate real user click on cell
+                                if (levelCell.click) {
+                                    levelCell.click();
+                                }
+
+                                // Click directly on radio button
+                                if (radioInput.click) {
+                                    radioInput.click();
+                                }
+
+                                // Force checked state after click
+                                setTimeout(() => {
                                     radioInput.checked = true;
 
-                                    // Update aria-checked attributes
+                                    // Dispatch native events
+                                    if (radioInput.dispatchEvent) {
+                                        radioInput.dispatchEvent(new MouseEvent('click', {
+                                            bubbles: true,
+                                            cancelable: true,
+                                            view: window
+                                        }));
+                                        radioInput.dispatchEvent(new Event('change', { bubbles: true }));
+                                    }
+
+                                    // Update ARIA attributes
                                     levelCell.setAttribute('aria-checked', 'true');
                                     levelCells.forEach(otherCell => {
                                         if (otherCell !== levelCell) {
                                             otherCell.setAttribute('aria-checked', 'false');
+                                            const otherRadio = otherCell.querySelector('input[type="radio"]');
+                                            if (otherRadio) {
+                                                otherRadio.checked = false;
+                                            }
                                         }
                                     });
+                                }, 50);
 
-                                    injected = true;
-                                }
+                                injected = true;
                             }
                         });
 
-                        // Inject comment
+                        // Inject comment into remark textarea
                         const remarkTextarea = row.querySelector('td.remark textarea');
                         if (remarkTextarea && comment) {
                             remarkTextarea.value = comment;
+                            remarkTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                            remarkTextarea.dispatchEvent(new Event('change', { bubbles: true }));
                             injected = true;
                         }
                     }
@@ -187,7 +232,10 @@ export const init = async (token) => {
             return injected;
         };
 
-        // --- Inject simple numeric grade ---
+        /**
+         * Injects simple numeric grade.
+         * @returns {boolean} True if grade was injected successfully
+         */
         const injectSimpleGrade = () => {
             if (rubricResponse || !grade) {
                 return false;
@@ -199,41 +247,83 @@ export const init = async (token) => {
             }
 
             gradeInput.value = grade;
-
-            // Trigger change event for Moodle detection
-            const event = new Event('change', { bubbles: true });
-            gradeInput.dispatchEvent(event);
+            gradeInput.dispatchEvent(new Event('change', { bubbles: true }));
 
             return true;
         };
 
+        /**
+         * Shows injection results to user.
+         * @param {boolean} success Whether injection was successful
+         */
+        const showResults = (success) => {
+            if (success) {
+                Notification.addNotification({
+                    message: strRubricSuccess,
+                    type: 'success'
+                });
+            } else {
+                Notification.addNotification({
+                    message: strRubricFailed,
+                    type: 'warning'
+                });
+            }
+        };
+
+        // Injection state
+        let successfulInjection = false;
         let attempts = 0;
+        const maxAttempts = 50;
+
+        // Strategy 1: Polling
         const interval = setInterval(() => {
             attempts++;
-            const messageInjected = injectMessage();
-            const rubricInjected = injectRubric();
-            const gradeInjected = injectSimpleGrade();
 
-            if ((messageInjected || rubricInjected || gradeInjected) || attempts > 20) {
-                clearInterval(interval);
+            if (!successfulInjection) {
+                injectMessage();
+                const rubricInjected = injectRubric();
+                const gradeInjected = injectSimpleGrade();
 
-                if (rubricInjected) {
-                    Notification.addNotification({
-                        message: strRubricSuccess,
-                        type: 'success'
-                    });
-                } else if (gradeInjected) {
-                    Notification.addNotification({
-                        message: strGradeSuccess,
-                        type: 'success'
-                    });
-                } else if (attempts > 20) {
-                    Notification.addNotification({
-                        message: strRubricFailed,
-                        type: 'warning'
-                    });
+                if (rubricInjected || gradeInjected) {
+                    successfulInjection = true;
                 }
             }
-        }, 500);
+
+            // Stop after successful injection or max attempts
+            if ((successfulInjection && attempts > 12) || attempts > maxAttempts) {
+                clearInterval(interval);
+                showResults(successfulInjection);
+            }
+        }, 300);
+
+        // Strategy 2: MutationObserver
+        const rubricContainer = document.querySelector('.gradingform_rubric') ||
+            document.querySelector('#page-content') ||
+            document.body;
+
+        if (rubricContainer) {
+            const observer = new MutationObserver(() => {
+                const criterionRows = document.querySelectorAll('tr.criterion');
+
+                if (criterionRows.length > 0 && !successfulInjection) {
+                    injectMessage();
+                    const rubricInjected = injectRubric();
+                    const gradeInjected = injectSimpleGrade();
+
+                    if (rubricInjected || gradeInjected) {
+                        successfulInjection = true;
+                        observer.disconnect();
+                    }
+                }
+            });
+
+            observer.observe(rubricContainer, {
+                childList: true,
+                subtree: true
+            });
+
+            setTimeout(() => observer.disconnect(), 15000);
+        }
+
     }).fail(Notification.exception);
 };

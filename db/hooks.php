@@ -15,20 +15,21 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Plugin version and other meta-data are defined here.
+ * Hook definitions for the local_assign_ai plugin.
  *
- * @package     local_assign_ai
- * @copyright   2025 Datacurso
- * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * This file declares the list of hook callbacks that are registered by this plugin.
+ *
+ * @package    local_assign_ai
+ * @copyright  2025 Datacurso
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'local_assign_ai';
-$plugin->release = '1.0.0';
-$plugin->version = 2025110900;
-$plugin->requires = 2024100700;
-$plugin->maturity = MATURITY_STABLE;
-$plugin->dependencies = [
-    'aiprovider_datacurso' => 2025100201,
+$callbacks = [
+    [
+        'hook' => \core\hook\output\before_footer_html_generation::class,
+        'callback' => 'local_assign_ai\hook\output_hook::before_footer_html_generation',
+        'priority' => 900,
+    ],
 ];

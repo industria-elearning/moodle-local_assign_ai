@@ -42,7 +42,7 @@ class observer {
      * Updates the local_assign_ai_pending table:
      *  - The feedback (comments).
      *  - The grade.
-     *  - La respuesta de la rúbrica (rubric_response).
+     *  - The rubric response (rubric_response).
      *
      * @param \mod_assign\event\submission_graded $event The grading event.
      * @return void

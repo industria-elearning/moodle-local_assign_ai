@@ -58,19 +58,3 @@ function local_assign_ai_extend_settings_navigation(settings_navigation $nav, co
         );
     }
 }
-
-/**
- * Injects the AI JavaScript into the grader if a token is present.
- */
-function local_assign_ai_before_footer() {
-    global $PAGE;
-
-    $cmid   = optional_param('id', 0, PARAM_INT);
-    $action = optional_param('action', '', PARAM_ALPHA);
-    $aitoken = optional_param('aitoken', '', PARAM_ALPHANUM);
-
-    // Only load in grader when AI token is present.
-    if ($cmid && $action === 'grader' && !empty($aitoken)) {
-        $PAGE->requires->js_call_amd('local_assign_ai/inject_ai', 'init', [$aitoken]);
-    }
-}

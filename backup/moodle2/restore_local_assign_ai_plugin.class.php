@@ -17,23 +17,19 @@
 /**
  * Restore plugin for local_assign_ai.
  *
+ * Handles the restoration of AI assignment data (pending and approved records)
+ * during course restore operations.
+ *
  * @package    local_assign_ai
  * @copyright  2025 Datacurso
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
-/**
- * Defines the restore logic for the local_assign_ai plugin.
- *
- * Handles the restoration of AI assignment data (pending and approved records)
- * during course restore operations.
  */
 class restore_local_assign_ai_plugin extends restore_local_plugin {
     /** @var array Temporary storage for records (pending or approved). */
     protected $temprecords = [];
 
     /**
-     * Define restore paths.
+     * Returns the definition of the restore paths for this plugin.
      *
      * @return restore_path_element[]
      */
@@ -47,9 +43,10 @@ class restore_local_assign_ai_plugin extends restore_local_plugin {
     }
 
     /**
-     * Collect each record from XML (pending or approved).
+     * Processes each record found in the XML backup file (pending or approved).
      *
-     * @param array $data Record data.
+     * @param array $data Record data from the backup file.
+     * @return void
      */
     public function process_local_assign_ai_pending($data) {
         mtrace("   - Reading assign_ai record from XML (assignmentid={$data['assignmentid']}, status={$data['status']})");
@@ -57,7 +54,11 @@ class restore_local_assign_ai_plugin extends restore_local_plugin {
     }
 
     /**
-     * After restoring the course, insert all records with new IDs.
+     * Restores all AI feedback records after the course has been restored.
+     *
+     * Maps old IDs to new ones and generates new approval tokens to avoid duplication.
+     *
+     * @return void
      */
     public function after_restore_course() {
         global $DB;
@@ -65,31 +66,48 @@ class restore_local_assign_ai_plugin extends restore_local_plugin {
         mtrace(">> [local_assign_ai] Restoring AI feedback records (pending + approved)...");
 
         if (empty($this->temprecords)) {
-            mtrace("   - No AI feedback data found in XML!");
+            mtrace("   - No AI feedback data found in XML.");
             return;
         }
 
         foreach ($this->temprecords as $recorddata) {
-            $newcourseid = $this->get_mappingid('course', $recorddata->courseid) ?: $recorddata->courseid;
-            $newuserid = $this->get_mappingid('user', $recorddata->userid) ?: $recorddata->userid;
+            // Map course ID.
+            $newcourseid = $this->get_mappingid('course', $recorddata->courseid);
+            if (empty($newcourseid)) {
+                $newcourseid = $recorddata->courseid;
+            }
 
-            // Map to the new course_module.id (the one seen in URLs).
-            $newcmid =
-            $this->get_mappingid('module', $recorddata->assignmentid)
-            ?: $this->get_mappingid('activity', $recorddata->assignmentid)
-            ?: $this->get_mappingid('assign', $recorddata->assignmentid)
-            ?: $this->get_mappingid('assignment', $recorddata->assignmentid)
-            ?: null;
+            // Map user ID.
+            $newuserid = $this->get_mappingid('user', $recorddata->userid);
+            if (empty($newuserid)) {
+                $newuserid = $recorddata->userid;
+            }
 
-            // Fallback: search by name in the new course.
+            // Map assignment to new course module ID.
+            $newcmid = $this->get_mappingid('module', $recorddata->assignmentid);
+            if (empty($newcmid)) {
+                $newcmid = $this->get_mappingid('activity', $recorddata->assignmentid);
+            }
+            if (empty($newcmid)) {
+                $newcmid = $this->get_mappingid('assign', $recorddata->assignmentid);
+            }
+            if (empty($newcmid)) {
+                $newcmid = $this->get_mappingid('assignment', $recorddata->assignmentid);
+            }
+            if (empty($newcmid)) {
+                $newcmid = null;
+            }
+
+            // Fallback: search by title in the new course.
             if (!$newcmid && !empty($recorddata->title)) {
                 $newcmid = $DB->get_field_sql("
-                SELECT cm.id
-                  FROM {course_modules} cm
-                  JOIN {modules} m ON m.id = cm.module
-                  JOIN {assign} a ON a.id = cm.instance
-                 WHERE cm.course = ? AND m.name = 'assign' AND a.name = ?
-            ", [$newcourseid, $recorddata->title]);
+                    SELECT cm.id
+                      FROM {course_modules} cm
+                      JOIN {modules} m ON m.id = cm.module
+                      JOIN {assign} a ON a.id = cm.instance
+                     WHERE cm.course = ? AND m.name = 'assign' AND a.name = ?
+                ", [$newcourseid, $recorddata->title]);
+
                 if ($newcmid) {
                     mtrace("   - Mapped by title '{$recorddata->title}' → cm.id={$newcmid}");
                 }
@@ -100,25 +118,44 @@ class restore_local_assign_ai_plugin extends restore_local_plugin {
                 $newcmid = $recorddata->assignmentid;
             }
 
-            // Insert the restored record.
+            // Create restored record.
             $record = new stdClass();
             $record->courseid = $newcourseid;
-            $record->assignmentid = $newcmid; // Use the course_module.id.
+            $record->assignmentid = $newcmid;
             $record->title = $recorddata->title;
             $record->userid = $newuserid;
             $record->message = $recorddata->message;
             $record->grade = $recorddata->grade;
             $record->rubric_response = $recorddata->rubric_response;
             $record->status = $recorddata->status;
-            $record->approval_token = $recorddata->approval_token ?: md5(uniqid('restored_', true));
-            $record->timecreated = $recorddata->timecreated ?: time();
-            $record->timemodified = $recorddata->timemodified ?: time();
-            $record->approved_at = $recorddata->approved_at ?? null;
 
+            // Always generate a new approval token to avoid duplicates with the original backup.
+            $record->approval_token = md5(uniqid('restored_', true));
+
+            // Set timestamps.
+            if (!empty($recorddata->timecreated)) {
+                $record->timecreated = $recorddata->timecreated;
+            } else {
+                $record->timecreated = time();
+            }
+
+            if (!empty($recorddata->timemodified)) {
+                $record->timemodified = $recorddata->timemodified;
+            } else {
+                $record->timemodified = time();
+            }
+
+            if (isset($recorddata->approved_at)) {
+                $record->approved_at = $recorddata->approved_at;
+            } else {
+                $record->approved_at = null;
+            }
+
+            // Insert record into the database.
             $DB->insert_record('local_assign_ai_pending', $record);
             mtrace("   + Restored record → course={$newcourseid}, cm={$newcmid}, status={$record->status}");
         }
 
-        mtrace(">> [local_assign_ai] Restoration completed ✅");
+        mtrace(">> [local_assign_ai] Restoration completed");
     }
 }
