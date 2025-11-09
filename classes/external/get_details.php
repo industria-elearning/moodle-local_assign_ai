@@ -29,12 +29,14 @@ use external_multiple_structure;
 /**
  * External function to retrieve details of a pending AI assignment approval.
  *
- * @package     local_assign_ai
- * @category    external
- * @copyright   2025 Datacurso
- * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * Provides the details for a pending approval request, such as token, message,
+ * status, user, and grading data.
+ *
+ * @package    local_assign_ai
+ * @category   external
+ * @copyright  2025 Datacurso
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 class get_details extends external_api {
     /**
      * Returns the description of the parameters for this external function.

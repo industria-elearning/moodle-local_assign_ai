@@ -23,7 +23,6 @@ namespace local_assign_ai;
  * @copyright   2025 Datacurso
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 class utils {
     /**
      * Mapping of accented and special characters to plain UTF-8 equivalents.

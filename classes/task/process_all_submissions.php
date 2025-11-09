@@ -37,7 +37,6 @@ use local_assign_ai\api\client;
  * @copyright   2025 Datacurso
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
 class process_all_submissions extends adhoc_task {
     /**
      * Executes the queued ad-hoc task.
