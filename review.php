@@ -30,33 +30,34 @@ require_login();
 try {
     $cmid = required_param('id', PARAM_INT);
 
-    // Obtener el coursemodule y el curso.
+    // Get the course module and the course.
     $cm = get_coursemodule_from_id('assign', $cmid, 0, false, MUST_EXIST);
     $course = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST);
     $context = context_module::instance($cm->id);
 
     require_capability('local/assign_ai:review', $context);
 
-    // Instanciar el objeto assign.
+    // Instantiate the assign object.
     $assign = new assign($context, $cm, $course);
 
-    // Configuración de la página.
+    // Page configuration.
     $PAGE->set_url(new moodle_url('/local/assign_ai/review.php', ['id' => $cmid]));
     $PAGE->set_course($course);
     $PAGE->set_context($context);
     $PAGE->set_title(get_string('reviewwithai', 'local_assign_ai'));
     $PAGE->set_heading(format_string($course->fullname));
     $PAGE->requires->js_call_amd('local_assign_ai/review', 'init');
+    $PAGE->requires->js_call_amd('local_assign_ai/review_with_ai', 'init');
     $PAGE->requires->css('/local/assign_ai/styles/review.css');
 
     $PAGE->activityheader->disable();
 
     echo $OUTPUT->header();
 
-    // Obtener lista de usuarios matriculados en el curso con capacidad de entregar.
+    // Get the list of enrolled users with submission capability.
     $students = get_enrolled_users($context, 'mod/assign:submit');
 
-    // Verificar si todos los estudiantes tienen feedback pendiente o aprobado.
+    // Check if all students have feedback pending or approved.
     $allblocked = true;
     foreach ($students as $student) {
         $record = $DB->get_record('local_assign_ai_pending', [
@@ -70,7 +71,7 @@ try {
         }
     }
 
-    // Título + botón revisar todos en la misma fila.
+    // Title + "review all" button in the same row.
     echo html_writer::start_div('d-flex justify-content-between align-items-center mb-3');
     echo $OUTPUT->heading(get_string('reviewwithai', 'local_assign_ai'), 2, 'mb-0');
 
@@ -80,17 +81,22 @@ try {
     ]);
 
     if ($allblocked) {
-        // Botón bloqueado.
+        // Disabled button.
         echo html_writer::tag('button', get_string('reviewall', 'local_assign_ai'), [
             'class' => 'btn btn-warning',
             'disabled' => 'disabled',
         ]);
     } else {
-        // Botón activo.
-        echo html_writer::link(
-            $reviewallurl,
+        // Active button.
+        echo html_writer::tag(
+            'button',
             get_string('reviewall', 'local_assign_ai'),
-            ['class' => 'btn btn-warning']
+            [
+                'type' => 'button',
+                'class' => 'btn btn-warning js-review-ai',
+                'data-cmid' => $cmid,
+                'data-all' => 1,
+            ]
         );
     }
     echo html_writer::end_div();
@@ -98,7 +104,7 @@ try {
     $rows = [];
 
     foreach ($students as $student) {
-        // Estado de la entrega.
+        // Submission status.
         $submission = $assign->get_user_submission($student->id, false);
         if ($submission) {
             switch ($submission->status) {
@@ -118,7 +124,7 @@ try {
             $status = get_string('submission_none', 'local_assign_ai');
         }
 
-        // Ultima modificación y archivos enviados.
+        // Last modification and submitted files.
         $lastmodified = '-';
         $filelinks = '-';
 
@@ -154,7 +160,7 @@ try {
             }
         }
 
-        // Estado IA.
+        // AI status.
         $record = $DB->get_record('local_assign_ai_pending', [
             'courseid' => $course->id,
             'assignmentid' => $cm->id,
@@ -193,7 +199,7 @@ try {
             );
         }
 
-        // Botón azul → grader.
+        // Blue button → grader.
         if ($record && !empty($record->approval_token)) {
             $viewurl = new moodle_url('/mod/assign/view.php', [
                 'id' => $cmid,
@@ -215,7 +221,7 @@ try {
             ['class' => 'btn btn-primary']
         );
 
-        // Botón gris → revisar IA por usuario.
+        // Gray button → review AI per user.
         $reviewurl = new moodle_url('/local/assign_ai/review_submission.php', [
             'id' => $cmid,
             'userid' => $student->id,
@@ -228,10 +234,15 @@ try {
                 ['class' => 'btn btn-warning', 'disabled' => 'disabled']
             );
         } else {
-            $reviewbtn = html_writer::link(
-                $reviewurl,
+            $reviewbtn = html_writer::tag(
+                'button',
                 get_string('review', 'local_assign_ai'),
-                ['class' => 'btn btn-warning']
+                [
+                'type' => 'button',
+                'class' => 'btn btn-warning js-review-ai',
+                'data-cmid' => $cmid,
+                'data-userid' => $student->id,
+                ]
             );
         }
 
@@ -258,6 +269,7 @@ try {
     $templatecontext = [
         'rows' => $rows,
         'headerlogo' => $logocontext,
+        'alttext' => get_string('altlogo', 'local_assign_ai'),
     ];
 
     echo $OUTPUT->render_from_template('local_assign_ai/review_table', $templatecontext);

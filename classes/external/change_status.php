@@ -14,14 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-/**
- * External function to change the status of AI assignment approvals.
- *
- * @package     local_assign_ai
- * @copyright   2025 Datacurso
- * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace local_assign_ai\external;
 
 defined('MOODLE_INTERNAL') || die();
@@ -35,7 +27,11 @@ use external_value;
 use external_single_structure;
 
 /**
- * External API to change status of pending approvals.
+ * External function to change the status of AI assignment approvals.
+ *
+ * @package     local_assign_ai
+ * @copyright   2025 Datacurso
+ * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class change_status extends external_api {
     /**
@@ -46,7 +42,7 @@ class change_status extends external_api {
     public static function execute_parameters() {
         return new external_function_parameters([
             'token'  => new external_value(PARAM_ALPHANUM, 'Approval token', VALUE_REQUIRED),
-            'action' => new external_value(PARAM_ALPHA, 'Acción: approve o rejected', VALUE_REQUIRED),
+            'action' => new external_value(PARAM_ALPHA, 'Action: approve or rejected', VALUE_REQUIRED),
         ]);
     }
 
@@ -68,6 +64,12 @@ class change_status extends external_api {
         $record = $DB->get_record('local_assign_ai_pending', [
             'approval_token' => $params['token'],
         ], '*', MUST_EXIST);
+
+        $cm = get_coursemodule_from_id('assign', $record->assignmentid, 0, false, MUST_EXIST);
+        $context = \context_module::instance($cm->id);
+
+        self::validate_context($context);
+        require_capability('local/assign_ai:changestatus', $context);
 
         $record->status = $params['action'];
         $record->timemodified = time();
@@ -103,7 +105,7 @@ class change_status extends external_api {
                 $event = \mod_assign\event\submission_graded::create_from_grade($assign, $grade);
                 $event->trigger();
             } else {
-                debugging("⚠️ No existe grade para userid={$record->userid}, assignid={$cm->instance}.", DEBUG_DEVELOPER);
+                debugging("No grade exists for userid={$record->userid}, assignid={$cm->instance}.", DEBUG_DEVELOPER);
             }
         }
 
@@ -120,8 +122,8 @@ class change_status extends external_api {
      */
     public static function execute_returns() {
         return new external_single_structure([
-            'status'    => new external_value(PARAM_TEXT, 'Estado de la operación'),
-            'newstatus' => new external_value(PARAM_TEXT, 'Nuevo estado aplicado'),
+            'status'    => new external_value(PARAM_TEXT, 'Operation status'),
+            'newstatus' => new external_value(PARAM_TEXT, 'New status applied'),
         ]);
     }
 }

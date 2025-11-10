@@ -14,15 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-/**
- * External function to update the response message of a pending approval.
- *
- * @package     local_assign_ai
- * @category    external
- * @copyright   2025 Datacurso
- * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace local_assign_ai\external;
 
 defined('MOODLE_INTERNAL') || die();
@@ -35,7 +26,12 @@ use external_value;
 use external_single_structure;
 
 /**
- * External API to update the response of a pending approval.
+ * External function to update the response message of a pending approval.
+ *
+ * @package     local_assign_ai
+ * @category    external
+ * @copyright   2025 Datacurso
+ * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class update_response extends external_api {
     /**
@@ -46,7 +42,7 @@ class update_response extends external_api {
     public static function execute_parameters() {
         return new external_function_parameters([
             'token' => new external_value(PARAM_TEXT, 'Approval token', VALUE_REQUIRED),
-            'message' => new external_value(PARAM_RAW, 'Mensaje actualizado', VALUE_REQUIRED),
+            'message' => new external_value(PARAM_RAW, 'Updated message', VALUE_REQUIRED),
         ]);
     }
 
@@ -69,6 +65,12 @@ class update_response extends external_api {
             'approval_token' => $params['token'],
         ], '*', MUST_EXIST);
 
+        $cm = get_coursemodule_from_id('assign', $record->assignmentid, 0, false, MUST_EXIST);
+        $context = \context_module::instance($cm->id);
+
+        self::validate_context($context);
+        require_capability('local/assign_ai:changestatus', $context);
+
         $record->message = $params['message'];
         $DB->update_record('local_assign_ai_pending', $record);
 
@@ -85,8 +87,8 @@ class update_response extends external_api {
      */
     public static function execute_returns() {
         return new external_single_structure([
-            'status' => new external_value(PARAM_TEXT, 'Estado de la operación'),
-            'message' => new external_value(PARAM_RAW, 'Mensaje actualizado'),
+            'status' => new external_value(PARAM_TEXT, 'Operation status'),
+            'message' => new external_value(PARAM_RAW, 'Updated message'),
         ]);
     }
 }

@@ -27,18 +27,18 @@ defined('MOODLE_INTERNAL') || die();
 require_once($CFG->dirroot . '/grade/grading/lib.php');
 
 /**
- * Convierte la rúbrica de una tarea en JSON simplificado.
+ * Converts the assignment rubric into simplified JSON.
  *
  * @param assign $assign The assignment instance.
  * @return array|null Simplified rubric array or null if no rubric is active.
  * @package local_assign_ai
  */
-function build_rubric_json(assign $assign) {
+function local_assign_ai_build_rubric_json(assign $assign) {
     global $DB;
 
     $context = $assign->get_context();
 
-    // Inicializar grading manager.
+    // Initialize grading manager.
     $gradingmanager = get_grading_manager($context, 'mod_assign', 'submissions');
     $method = $gradingmanager->get_active_method();
 
@@ -57,7 +57,7 @@ function build_rubric_json(assign $assign) {
     }
 
     $rubric = [
-        'title' => $definition->name ?? 'Rúbrica',
+        'title' => $definition->name ?? get_string('default_rubric_name', 'local_assign_ai'),
         'description' => $definition->description ?? '',
         'criteria' => [],
     ];

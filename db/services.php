@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Configuración del plugin Assign AI.
+ * Assign AI plugin configuration.
  *
  * @package    local_assign_ai
  * @copyright  2025 Datacurso
@@ -48,5 +48,13 @@ $functions = [
         'description' => 'Cambiar estado de retroalimentación IA',
         'type'        => 'write',
         'ajax'        => true,
+    ],
+    'local_assign_ai_process_submission' => [
+        'classname'   => 'local_assign_ai\external\process_submission',
+        'methodname'  => 'execute',
+        'description' => 'Process assignment submissions using AI.',
+        'type'        => 'write',
+        'ajax'        => true,
+        'capabilities' => 'local/assign_ai:review',
     ],
 ];

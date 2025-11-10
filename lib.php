@@ -22,9 +22,8 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-
 /**
- * Extiende la navegación de las tareas para mostrar el botón "Revisión con IA".
+ * Extends assignment navigation to display the "AI Review" button.
  *
  * @param settings_navigation $nav     The settings navigation object.
  * @param context             $context The current context.
@@ -33,17 +32,17 @@
 function local_assign_ai_extend_settings_navigation(settings_navigation $nav, context $context) {
     global $PAGE, $DB;
 
-    // Verificar que estemos en un contexto de módulo (actividad).
+    // Verify that we are in a module (activity) context.
     if ($context->contextlevel != CONTEXT_MODULE) {
         return;
     }
 
-    // Verificar que sea un foro.
+    // Verify that it is an assignment.
     if ($PAGE->cm->modname !== 'assign') {
         return;
     }
 
-    // Buscar el nodo de configuraciones del módulo.
+    // Find the module settings node.
     $modulesettings = $nav->find('modulesettings', navigation_node::TYPE_SETTING);
 
     if ($modulesettings) {
@@ -57,21 +56,5 @@ function local_assign_ai_extend_settings_navigation(settings_navigation $nav, co
             'assign_ai_config',
             new pix_icon('i/settings', '')
         );
-    }
-}
-
-/**
- * Inyecta el JS de IA en el grader si hay un token.
- */
-function local_assign_ai_before_footer() {
-    global $PAGE;
-
-    $cmid   = optional_param('id', 0, PARAM_INT);
-    $action = optional_param('action', '', PARAM_ALPHA);
-    $aitoken = optional_param('aitoken', '', PARAM_ALPHANUM);
-
-    // Solo cargar en grader con token IA.
-    if ($cmid && $action === 'grader' && !empty($aitoken)) {
-        $PAGE->requires->js_call_amd('local_assign_ai/inject_ai', 'init', [$aitoken]);
     }
 }

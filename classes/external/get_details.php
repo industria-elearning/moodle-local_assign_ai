@@ -14,15 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-/**
- * External function to retrieve details of a pending AI assignment approval.
- *
- * @package     local_assign_ai
- * @category    external
- * @copyright   2025 Datacurso
- * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace local_assign_ai\external;
 
 defined('MOODLE_INTERNAL') || die();
@@ -36,7 +27,15 @@ use external_value;
 use external_multiple_structure;
 
 /**
- * External API to get details of a pending approval.
+ * External function to retrieve details of a pending AI assignment approval.
+ *
+ * Provides the details for a pending approval request, such as token, message,
+ * status, user, and grading data.
+ *
+ * @package    local_assign_ai
+ * @category   external
+ * @copyright  2025 Datacurso
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class get_details extends external_api {
     /**
@@ -62,6 +61,12 @@ class get_details extends external_api {
         $params = self::validate_parameters(self::execute_parameters(), ['token' => $token]);
 
         $record = $DB->get_record('local_assign_ai_pending', ['approval_token' => $params['token']], '*', MUST_EXIST);
+
+        $cm = get_coursemodule_from_id('assign', $record->assignmentid, $record->courseid, false, MUST_EXIST);
+        $context = \context_module::instance($cm->id);
+
+        self::validate_context($context);
+        require_capability('local/assign_ai:viewdetails', $context);
 
         return [
             'token' => $record->approval_token,

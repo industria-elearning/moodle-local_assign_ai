@@ -14,14 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * Privacy subsystem implementation for local_assign_ai.
- *
- * @package    local_assign_ai
- * @copyright  2025 Datacurso
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace local_assign_ai\privacy;
 
 use context;
@@ -35,9 +27,16 @@ use core_privacy\local\request\writer;
 use stdClass;
 
 /**
- * Privacy provider for the local_assign_ai plugin.
+ * Privacy subsystem implementation for local_assign_ai.
+ *
+ * @package    local_assign_ai
+ * @copyright  2025 Datacurso
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class provider implements core_userlist_provider, \core_privacy\local\request\plugin\provider, \core_privacy\local\metadata\provider {
+class provider implements
+    core_userlist_provider,
+    \core_privacy\local\request\plugin\provider,
+    \core_privacy\local\metadata\provider {
     /**
      * Describe the types of personal data stored by this plugin.
      *

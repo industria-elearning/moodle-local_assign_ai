@@ -1,0 +1,17 @@
+/* Styling for the AI feedback modal */
+.local-assign-ai-modal {
+    padding-top: 0.5rem;
+}
+
+/* Buttons container */
+.local-assign-ai-modal .ai-buttons {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+/* Optional: make buttons the same height for consistency */
+.local-assign-ai-modal .ai-buttons .btn {
+    min-width: 120px;
+}

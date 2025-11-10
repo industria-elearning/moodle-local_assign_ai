@@ -14,18 +14,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
+namespace local_assign_ai\rubric;
+
 /**
  * Rubric helper functions for local_assign_ai.
  *
  * @package     local_assign_ai
  * @copyright   2025 Datacurso
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
-namespace local_assign_ai\rubric;
-
-/**
- * Helper class to fetch rubric definitions and criteria.
  */
 class rubric_helper {
     /**

@@ -1,21 +1,70 @@
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Insert comments, rubric, and AI-generated rating into the task evaluation form.
+ *
+ * @module      local_assign_ai/inject_ai
+ * @copyright   2025 Datacurso
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 import Ajax from 'core/ajax';
 import Notification from 'core/notification';
+import { get_string as getString } from 'core/str';
 
-export const init = (token) => {
+/**
+ * Injects AI feedback, rubric, or grade into the assignment grading form.
+ *
+ * @param {string} token Approval token
+ */
+export const init = async (token) => {
     if (!token) {
         return;
     }
 
+    // Preload language strings
+    const [
+        strErrorParsing,
+        strRubricArray,
+        strRubricSuccess,
+        strRubricFailed
+    ] = await Promise.all([
+        getString('errorparsingrubric', 'local_assign_ai'),
+        getString('rubricmustarray', 'local_assign_ai'),
+        getString('rubricsuccess', 'local_assign_ai'),
+        getString('rubricfailed', 'local_assign_ai'),
+    ]);
+
+    // Retrieve AI-generated feedback details
     Ajax.call([{
         methodname: 'local_assign_ai_get_details',
         args: { token: token },
     }])[0].done(data => {
-        const message = data.message;
-        const rubricResponse = data.rubric_response;
-        const grade = data.grade; // Calificación simple si no hay rúbrica
+        const message = data.message ?? data.reply ?? '';
+        const rubricResponse = data.rubric_response ?? data.rubric ?? null;
+        const grade = data.grade ?? null;
 
+        /**
+         * Injects AI message into feedback editor.
+         * @returns {boolean} True if message was injected successfully
+         */
         const injectMessage = () => {
-            const textarea = document.querySelector('#id_assignfeedbackcomments_editor, textarea[id^="id_feedbackcomments_"]');
+            const textarea = document.querySelector(
+                '#id_assignfeedbackcomments_editor, textarea[id^="id_feedbackcomments_"]'
+            );
 
             if (!textarea) {
                 return false;
@@ -23,13 +72,13 @@ export const init = (token) => {
 
             textarea.value = message;
 
-            // TinyMCE
+            // TinyMCE support
             if (window.tinymce && window.tinymce.get(textarea.id)) {
                 window.tinymce.get(textarea.id).setContent(message);
                 return true;
             }
 
-            // Atto
+            // Atto support
             if (window.M && window.M.editor_atto && window.M.editor_atto.getEditorForElement) {
                 const editor = window.M.editor_atto.getEditorForElement(textarea);
                 if (editor) {
@@ -38,9 +87,13 @@ export const init = (token) => {
                 }
             }
 
-            return false;
+            return textarea.value === message;
         };
 
+        /**
+         * Injects rubric selections and comments.
+         * @returns {boolean} True if rubric was injected successfully
+         */
         const injectRubric = () => {
             if (!rubricResponse) {
                 return false;
@@ -53,7 +106,7 @@ export const init = (token) => {
                     : rubricResponse;
             } catch (e) {
                 Notification.addNotification({
-                    message: 'Error parsing rubric_response: ' + e.message,
+                    message: `${strErrorParsing} ${e.message}`,
                     type: 'error'
                 });
                 return false;
@@ -61,7 +114,7 @@ export const init = (token) => {
 
             if (!Array.isArray(rubricData)) {
                 Notification.addNotification({
-                    message: 'rubric_response debe ser un array',
+                    message: strRubricArray,
                     type: 'error'
                 });
                 return false;
@@ -69,7 +122,7 @@ export const init = (token) => {
 
             let injected = false;
 
-            // Función para normalizar strings (eliminar tildes y espacios extra)
+            // Normalize text
             const normalizeString = (str) => {
                 return str
                     .normalize('NFD')
@@ -78,62 +131,98 @@ export const init = (token) => {
                     .trim();
             };
 
-            // Iterar sobre cada criterio
-            rubricData.forEach(criterionData => {
+            // Find all criteria rows
+            const criterionRows = document.querySelectorAll('tr.criterion');
+
+            if (criterionRows.length === 0) {
+                return false;
+            }
+
+            // Process each criterion from AI data
+            rubricData.forEach((criterionData) => {
                 const criterionName = criterionData.criterion;
                 const targetPoints = criterionData.levels[0].points;
                 const comment = criterionData.levels[0].comment;
 
-                // Buscar todos los criterios en la tabla
-                const criterionRows = document.querySelectorAll('tr.criterion');
-
-                criterionRows.forEach(row => {
-                    // Obtener el nombre del criterio desde la celda description
+                // Find matching criterion row in DOM
+                criterionRows.forEach((row) => {
                     const descriptionCell = row.querySelector('td.description');
                     if (!descriptionCell) {
                         return;
                     }
 
                     const rowCriterionName = descriptionCell.textContent.trim();
+                    const normalizedRow = normalizeString(rowCriterionName);
+                    const normalizedTarget = normalizeString(criterionName);
 
-                    // Comparar nombres normalizados (sin tildes, case-insensitive)
-                    if (normalizeString(rowCriterionName) === normalizeString(criterionName)) {
-                        // Buscar el nivel con los puntos correctos
+                    // Compare normalized names (case-insensitive, no accents)
+                    if (normalizedRow === normalizedTarget) {
+                        // Find level cells
                         const levelCells = row.querySelectorAll('td.level');
 
-                        levelCells.forEach(levelCell => {
+                        levelCells.forEach((levelCell) => {
                             const scoreSpan = levelCell.querySelector('.scorevalue');
                             if (!scoreSpan) {
                                 return;
                             }
 
-                            const points = parseInt(scoreSpan.textContent.trim());
+                            const points = parseInt(scoreSpan.textContent.trim(), 10);
 
-                            // Si coinciden los puntos, seleccionar este nivel
+                            // Select level with matching points
                             if (points === targetPoints) {
                                 const radioInput = levelCell.querySelector('input[type="radio"]');
-                                if (radioInput) {
+
+                                if (!radioInput) {
+                                    return;
+                                }
+
+                                // Simulate real user click on cell
+                                if (levelCell.click) {
+                                    levelCell.click();
+                                }
+
+                                // Click directly on radio button
+                                if (radioInput.click) {
+                                    radioInput.click();
+                                }
+
+                                // Force checked state after click
+                                setTimeout(() => {
                                     radioInput.checked = true;
 
-                                    // Actualizar aria-checked en el td
-                                    levelCell.setAttribute('aria-checked', 'true');
+                                    // Dispatch native events
+                                    if (radioInput.dispatchEvent) {
+                                        radioInput.dispatchEvent(new MouseEvent('click', {
+                                            bubbles: true,
+                                            cancelable: true,
+                                            view: window
+                                        }));
+                                        radioInput.dispatchEvent(new Event('change', { bubbles: true }));
+                                    }
 
-                                    // Remover aria-checked de otros niveles
+                                    // Update ARIA attributes
+                                    levelCell.setAttribute('aria-checked', 'true');
                                     levelCells.forEach(otherCell => {
                                         if (otherCell !== levelCell) {
                                             otherCell.setAttribute('aria-checked', 'false');
+                                            const otherRadio = otherCell.querySelector('input[type="radio"]');
+                                            if (otherRadio) {
+                                                otherRadio.checked = false;
+                                            }
                                         }
                                     });
+                                }, 50);
 
-                                    injected = true;
-                                }
+                                injected = true;
                             }
                         });
 
-                        // Inyectar comentario en el textarea de remark
+                        // Inject comment into remark textarea
                         const remarkTextarea = row.querySelector('td.remark textarea');
                         if (remarkTextarea && comment) {
                             remarkTextarea.value = comment;
+                            remarkTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+                            remarkTextarea.dispatchEvent(new Event('change', { bubbles: true }));
                             injected = true;
                         }
                     }
@@ -143,56 +232,98 @@ export const init = (token) => {
             return injected;
         };
 
+        /**
+         * Injects simple numeric grade.
+         * @returns {boolean} True if grade was injected successfully
+         */
         const injectSimpleGrade = () => {
-            // Solo intentar si no hay rúbrica y hay una calificación
             if (rubricResponse || !grade) {
                 return false;
             }
 
-            // Buscar el campo de calificación simple
             const gradeInput = document.querySelector('#id_grade, input[name="grade"]');
-
             if (!gradeInput) {
                 return false;
             }
 
             gradeInput.value = grade;
-
-            // Disparar evento change para que Moodle detecte el cambio
-            const event = new Event('change', { bubbles: true });
-            gradeInput.dispatchEvent(event);
+            gradeInput.dispatchEvent(new Event('change', { bubbles: true }));
 
             return true;
         };
 
-        // Intentar inyectar con reintentos
+        /**
+         * Shows injection results to user.
+         * @param {boolean} success Whether injection was successful
+         */
+        const showResults = (success) => {
+            if (success) {
+                Notification.addNotification({
+                    message: strRubricSuccess,
+                    type: 'success'
+                });
+            } else {
+                Notification.addNotification({
+                    message: strRubricFailed,
+                    type: 'warning'
+                });
+            }
+        };
+
+        // Injection state
+        let successfulInjection = false;
         let attempts = 0;
+        const maxAttempts = 50;
+
+        // Strategy 1: Polling
         const interval = setInterval(() => {
             attempts++;
-            const messageInjected = injectMessage();
-            const rubricInjected = injectRubric();
-            const gradeInjected = injectSimpleGrade();
 
-            if ((messageInjected || rubricInjected || gradeInjected) || attempts > 20) {
-                clearInterval(interval);
+            if (!successfulInjection) {
+                injectMessage();
+                const rubricInjected = injectRubric();
+                const gradeInjected = injectSimpleGrade();
 
-                if (rubricInjected) {
-                    Notification.addNotification({
-                        message: 'Rúbrica inyectada exitosamente',
-                        type: 'success'
-                    });
-                } else if (gradeInjected) {
-                    Notification.addNotification({
-                        message: 'Calificación inyectada exitosamente',
-                        type: 'success'
-                    });
-                } else if (attempts > 20) {
-                    Notification.addNotification({
-                        message: 'No se pudo inyectar la rúbrica después de 20 intentos',
-                        type: 'warning'
-                    });
+                if (rubricInjected || gradeInjected) {
+                    successfulInjection = true;
                 }
             }
-        }, 500);
+
+            // Stop after successful injection or max attempts
+            if ((successfulInjection && attempts > 12) || attempts > maxAttempts) {
+                clearInterval(interval);
+                showResults(successfulInjection);
+            }
+        }, 300);
+
+        // Strategy 2: MutationObserver
+        const rubricContainer = document.querySelector('.gradingform_rubric') ||
+            document.querySelector('#page-content') ||
+            document.body;
+
+        if (rubricContainer) {
+            const observer = new MutationObserver(() => {
+                const criterionRows = document.querySelectorAll('tr.criterion');
+
+                if (criterionRows.length > 0 && !successfulInjection) {
+                    injectMessage();
+                    const rubricInjected = injectRubric();
+                    const gradeInjected = injectSimpleGrade();
+
+                    if (rubricInjected || gradeInjected) {
+                        successfulInjection = true;
+                        observer.disconnect();
+                    }
+                }
+            });
+
+            observer.observe(rubricContainer, {
+                childList: true,
+                subtree: true
+            });
+
+            setTimeout(() => observer.disconnect(), 15000);
+        }
+
     }).fail(Notification.exception);
 };

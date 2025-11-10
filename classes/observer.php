@@ -14,6 +14,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
+namespace local_assign_ai;
+
 /**
  * Event observers for local_assign_ai.
  *
@@ -21,12 +23,6 @@
  * @category    event
  * @copyright   2025 Datacurso
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
-namespace local_assign_ai;
-
-/**
- * Observer class for handling assignment events.
  */
 class observer {
     /**
@@ -46,7 +42,7 @@ class observer {
      * Updates the local_assign_ai_pending table:
      *  - The feedback (comments).
      *  - The grade.
-     *  - La respuesta de la rúbrica (rubric_response).
+     *  - The rubric response (rubric_response).
      *
      * @param \mod_assign\event\submission_graded $event The grading event.
      * @return void

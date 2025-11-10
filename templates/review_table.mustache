@@ -15,18 +15,18 @@
     along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 }}
 {{!
-    @template local_assign_ai/review
-    Plantilla para revisar respuestas AI.
+    @template local_assign_ai/review_table
+    Template to review AI responses.
 
     Example context (json):
     {
-      "fullname": "María López",
+      "fullname": "Maria Lopez",
       "email": "maria.lopez@example.com",
-      "status": "No enviado",
+      "status": "Not submitted",
       "lastmodified": "-",
       "files": "",
       "aistatus": "N/A",
-      "actions": "<span class='text-muted'>Sin acciones</span>"
+      "actions": "<span class='text-muted'>No actions</span>"
     }
 }}
 
@@ -66,6 +66,6 @@
 
 {{#headerlogo}}
 <a class="local_assign_ai-logo-wrapper" href="https://datacurso.com/" target="_blank" rel="noopener noreferrer">
-    <img src="{{logourl}}" alt="Logo Datacurso" class="local_assign_ai-pluginlogo">
+    <img src="{{logourl}}" alt="{{alttext}}" class="local_assign_ai-pluginlogo">
 </a>
 {{/headerlogo}}
