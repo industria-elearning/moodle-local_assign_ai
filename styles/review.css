@@ -6,7 +6,7 @@
 }
 
 .local_assign_ai-logo-wrapper {
-    display: flex;
+    display: inline-flex;
     justify-content: flex-end;
     align-items: flex-end;
     margin-top: 1rem;
