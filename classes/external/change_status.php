@@ -81,12 +81,24 @@ class change_status extends external_api {
             $course = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST);
             $assign = new \assign($context, $cm, $course);
 
-            $grade = $DB->get_record('assign_grades', [
-                'assignment' => $cm->instance,
-                'userid'     => $record->userid,
-            ]);
+            $grade = $assign->get_user_grade($record->userid, true);
+            $gradepushed = false;
 
             if ($grade) {
+                if ($record->grade !== null && $record->grade !== '') {
+                    $instancegrade = (float) $assign->get_instance()->grade;
+                    if ($instancegrade > 0) {
+                        $gradevalue = (float) $record->grade;
+                        // Clamp to the assignment grading range.
+                        $gradevalue = max(0, min($gradevalue, $instancegrade));
+                        $grade->grade = $gradevalue;
+                        $grade->grader = $USER->id;
+                        $gradepushed = $assign->update_grade($grade);
+                    } else {
+                        debugging('La tarea usa una escala, no se puede aplicar automáticamente la calificación numérica de la IA.', DEBUG_DEVELOPER);
+                    }
+                }
+
                 $feedback = $DB->get_record('assignfeedback_comments', ['grade' => $grade->id]);
                 if ($feedback) {
                     $feedback->commenttext = $record->message;
@@ -102,8 +114,10 @@ class change_status extends external_api {
                     $DB->insert_record('assignfeedback_comments', $feedback);
                 }
 
-                $event = \mod_assign\event\submission_graded::create_from_grade($assign, $grade);
-                $event->trigger();
+                if (!$gradepushed) {
+                    $event = \mod_assign\event\submission_graded::create_from_grade($assign, $grade);
+                    $event->trigger();
+                }
             } else {
                 debugging("No grade exists for userid={$record->userid}, assignid={$cm->instance}.", DEBUG_DEVELOPER);
             }
