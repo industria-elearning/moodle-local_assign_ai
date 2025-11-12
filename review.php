@@ -25,8 +25,6 @@
 require_once(__DIR__ . '/../../config.php');
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
 
-require_login();
-
 try {
     $cmid = required_param('id', PARAM_INT);
 
@@ -34,6 +32,9 @@ try {
     $cm = get_coursemodule_from_id('assign', $cmid, 0, false, MUST_EXIST);
     $course = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST);
     $context = context_module::instance($cm->id);
+
+    // Asegurar login vinculado al módulo para integrar navegación correctamente.
+    require_login($course, true, $cm);
 
     require_capability('local/assign_ai:review', $context);
 
@@ -49,6 +50,10 @@ try {
     $PAGE->requires->js_call_amd('local_assign_ai/review', 'init');
     $PAGE->requires->js_call_amd('local_assign_ai/review_with_ai', 'init');
     $PAGE->requires->css('/local/assign_ai/styles/review.css');
+
+    // Migas de pan: nombre de la actividad -> página actual.
+    $PAGE->navbar->add(format_string($assign->get_instance()->name), new moodle_url('/mod/assign/view.php', ['id' => $cmid]));
+    $PAGE->navbar->add(get_string('reviewwithai', 'local_assign_ai'));
 
     $PAGE->activityheader->disable();
 
