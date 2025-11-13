@@ -116,4 +116,49 @@ class observer {
             debugging('Exception in submission_graded observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
     }
+
+    /**
+     * Resets AI pending records when a student edits a submission and multiple attempts are allowed.
+     *
+     * @param \mod_assign\event\submission_updated $event The submission updated event.
+     * @return void
+     */
+    public static function submission_updated(\mod_assign\event\submission_updated $event) {
+        global $DB;
+
+        try {
+
+            $assign = $event->get_assign();
+            if (!$assign) {
+                return;
+            }
+
+            $instance = $assign->get_instance();
+            $maxattempts = isset($instance->maxattempts) ? (int)$instance->maxattempts : 1;
+            $allowsmultiple = $maxattempts > 1 || $maxattempts === ASSIGN_UNLIMITED_ATTEMPTS;
+            if (!$allowsmultiple) {
+                return;
+            }
+
+            $data = $event->get_data();
+            $userid = $data['relateduserid'] ?? null;
+            if (!$userid) {
+                return;
+            }
+
+            $cmid = $assign->get_course_module()->id;
+            $record = $DB->get_record('local_assign_ai_pending', [
+                'assignmentid' => $cmid,
+                'userid' => $userid,
+            ]);
+
+            if (!$record || $record->status !== 'approve') {
+                return;
+            }
+
+            $DB->delete_records('local_assign_ai_pending', ['id' => $record->id]);
+        } catch (\Exception $e) {
+            debugging('Exception in submission_updated observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
+    }
 }

@@ -95,7 +95,6 @@ class process_submission extends external_api {
                 'cmid' => $cmid,
                 'courseid' => $course->id,
             ]);
-            $task->set_component('local_assign_ai');
             \core\task\manager::queue_adhoc_task($task);
 
             return [

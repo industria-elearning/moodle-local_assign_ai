@@ -32,4 +32,11 @@ $observers = [
         'internal' => false,
         'priority' => 9999,
     ],
+    [
+        'eventname' => '\mod_assign\event\submission_updated',
+        'callback' => 'local_assign_ai\observer::submission_updated',
+        'includefile' => '/local/assign_ai/classes/observer.php',
+        'internal' => false,
+        'priority' => 9999,
+    ],
 ];

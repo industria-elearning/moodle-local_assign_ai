@@ -184,6 +184,11 @@ try {
         ]);
         $grade = '-';
 
+        if ($record && $record->status === 'approve') {
+            // Hide submissions that were already approved and saved.
+            continue;
+        }
+
         if ($record) {
             switch ($record->status) {
                 case 'approve':
