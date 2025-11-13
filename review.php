@@ -51,10 +51,6 @@ try {
     $PAGE->requires->js_call_amd('local_assign_ai/review_with_ai', 'init');
     $PAGE->requires->css('/local/assign_ai/styles/review.css');
 
-    // Migas de pan: nombre de la actividad -> página actual.
-    $PAGE->navbar->add(format_string($assign->get_instance()->name), new moodle_url('/mod/assign/view.php', ['id' => $cmid]));
-    $PAGE->navbar->add(get_string('reviewwithai', 'local_assign_ai'));
-
     $PAGE->activityheader->disable();
 
     echo $OUTPUT->header();
