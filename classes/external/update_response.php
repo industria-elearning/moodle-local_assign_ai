@@ -54,7 +54,7 @@ class update_response extends external_api {
      * @return array The result of the operation.
      */
     public static function execute($token, $message) {
-        global $DB;
+        global $DB, $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'token' => $token,
@@ -72,6 +72,8 @@ class update_response extends external_api {
         require_capability('local/assign_ai:changestatus', $context);
 
         $record->message = $params['message'];
+        $record->timemodified = time();
+        $record->usermodified = $USER->id ?? $record->usermodified;
         $DB->update_record('local_assign_ai_pending', $record);
 
         return [

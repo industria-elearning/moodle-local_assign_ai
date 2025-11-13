@@ -110,6 +110,9 @@ class observer {
             }
 
             $record->status = 'approve';
+            if (!empty($data['userid'])) {
+                $record->usermodified = $data['userid'];
+            }
             $record->timemodified = time();
             $DB->update_record('local_assign_ai_pending', $record);
         } catch (\Exception $e) {

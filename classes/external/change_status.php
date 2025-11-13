@@ -73,6 +73,7 @@ class change_status extends external_api {
 
         $record->status = $params['action'];
         $record->timemodified = time();
+        $record->usermodified = $USER->id ?? $record->usermodified;
         $DB->update_record('local_assign_ai_pending', $record);
 
         if ($params['action'] === 'approve') {

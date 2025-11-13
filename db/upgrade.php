@@ -84,5 +84,73 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025092600, 'local', 'assign_ai');
     }
 
+    if ($oldversion < 2025111305) {
+        // Define field usermodified to be added to local_assign_ai_pending.
+        $table = new xmldb_table('local_assign_ai_pending');
+        $field = new xmldb_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'approval_token');
+
+        // Conditionally launch add field usermodified.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field timecreated to be added to local_assign_ai_pending.
+        $table = new xmldb_table('local_assign_ai_pending');
+        $field = new xmldb_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, null, null, '0', 'usermodified');
+
+        // Conditionally launch add field timecreated.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field timemodified to be added to local_assign_ai_pending.
+        $table = new xmldb_table('local_assign_ai_pending');
+        $field = new xmldb_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, null, null, '0', 'timecreated');
+
+        // Conditionally launch add field timemodified.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $now = time();
+
+        // Ensure timemodified always has a value.
+        $DB->execute(
+            "UPDATE {local_assign_ai_pending}
+                SET timemodified = :now
+              WHERE timemodified IS NULL OR timemodified = 0",
+            ['now' => $now]
+        );
+
+        // Use timemodified when timecreated was empty.
+        $DB->execute(
+            "UPDATE {local_assign_ai_pending}
+                SET timecreated = timemodified
+              WHERE (timecreated IS NULL OR timecreated = 0)
+                AND (timemodified IS NOT NULL AND timemodified > 0)"
+        );
+
+        // Fallback value for timecreated.
+        $DB->execute(
+            "UPDATE {local_assign_ai_pending}
+                SET timecreated = :now
+              WHERE timecreated IS NULL OR timecreated = 0",
+            ['now' => $now]
+        );
+
+        // Populate usermodified with the originating userid when missing.
+        $DB->execute(
+            "UPDATE {local_assign_ai_pending}
+                SET usermodified = userid
+              WHERE (usermodified IS NULL OR usermodified = 0)
+                AND userid IS NOT NULL"
+        );
+
+
+        // Assign_ai savepoint reached.
+        upgrade_plugin_savepoint(true, 2025111305, 'local', 'assign_ai');
+    }
+
+
     return true;
 }

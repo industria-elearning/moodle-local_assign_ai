@@ -149,7 +149,7 @@ class process_submission extends external_api {
      * @return string|null The approval token generated or found, or null on failure.
      */
     public static function process_submission_ai(\assign $assign, $course, $student, $DB, $countmode = false) {
-        global $CFG;
+        global $CFG, $USER;
 
         $submission = $assign->get_user_submission($student->id, false);
         if (!$submission || $submission->status !== 'submitted') {
@@ -215,6 +215,7 @@ class process_submission extends external_api {
 
         // Create new pending record.
         $token = bin2hex(random_bytes(16));
+        $now = time();
         $record = (object)[
             'courseid' => $course->id,
             'assignmentid' => $cmid,
@@ -225,7 +226,9 @@ class process_submission extends external_api {
             'rubric_response' => isset($data['rubric']) ? json_encode($data['rubric'], JSON_UNESCAPED_UNICODE) : null,
             'status' => 'pending',
             'approval_token' => $token,
-            'timemodified' => time(),
+            'usermodified' => $USER->id ?? null,
+            'timecreated' => $now,
+            'timemodified' => $now,
         ];
         $DB->insert_record('local_assign_ai_pending', $record);
 

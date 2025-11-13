@@ -205,7 +205,7 @@ try {
             $aibutton = html_writer::tag(
                 'button',
                 get_string('viewdetails', 'local_assign_ai'),
-                ['class' => 'btn btn-success view-details', 'data-token' => $record->approval_token]
+                ['class' => 'btn btn-success btn-sm text-nowrap view-details', 'data-token' => $record->approval_token]
             );
 
             if ($record->grade !== null) {
@@ -216,7 +216,7 @@ try {
             $aibutton = html_writer::tag(
                 'button',
                 get_string('viewdetails', 'local_assign_ai'),
-                ['class' => 'btn btn-success view-details', 'disabled' => 'disabled']
+                ['class' => 'btn btn-success btn-sm text-nowrap view-details', 'disabled' => 'disabled']
             );
         }
 
@@ -239,7 +239,7 @@ try {
         $button = html_writer::link(
             $viewurl,
             get_string('qualify', 'local_assign_ai'),
-            ['class' => 'btn btn-primary']
+            ['class' => 'btn btn-primary btn-sm text-nowrap']
         );
 
         // Gray button → review AI per user.
@@ -252,7 +252,7 @@ try {
             $reviewbtn = html_writer::tag(
                 'button',
                 get_string('review', 'local_assign_ai'),
-                ['class' => 'btn btn-warning', 'disabled' => 'disabled']
+                ['class' => 'btn btn-warning btn-sm text-nowrap', 'disabled' => 'disabled']
             );
         } else {
             $reviewbtn = html_writer::tag(
@@ -260,7 +260,7 @@ try {
                 get_string('review', 'local_assign_ai'),
                 [
                 'type' => 'button',
-                'class' => 'btn btn-warning js-review-ai',
+                'class' => 'btn btn-warning btn-sm text-nowrap js-review-ai',
                 'data-cmid' => $cmid,
                 'data-userid' => $student->id,
                 ]
