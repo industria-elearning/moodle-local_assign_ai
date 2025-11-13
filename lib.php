@@ -56,5 +56,15 @@ function local_assign_ai_extend_settings_navigation(settings_navigation $nav, co
             'assign_ai_config',
             new pix_icon('i/settings', '')
         );
+
+        $historyurl = new moodle_url('/local/assign_ai/history.php', ['id' => $PAGE->cm->id]);
+        $modulesettings->add(
+            get_string('reviewhistory', 'local_assign_ai'),
+            $historyurl,
+            navigation_node::TYPE_SETTING,
+            null,
+            'assign_ai_history',
+            new pix_icon('i/report', '')
+        );
     }
 }
