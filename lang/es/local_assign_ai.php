@@ -72,6 +72,7 @@ $string['reloadpage'] = 'Recarga la página para ver los resultados actualizados
 $string['review'] = 'Revisar';
 $string['reviewall'] = 'Revisar todos';
 $string['reviewwithai'] = 'Revisión con IA';
+$string['error_ws_not_configured'] = 'Las acciones de revisión de actividades con IA no están disponibles porque el servicio web de Datacurso no está configurado. Complete la configuración en <a href="{$a->url}">Configuración de servicio web Datacurso</a> o contacte a su administrador.';
 $string['rubricfailed'] = 'No se logró inyectar la rúbrica después de 20 intentos';
 $string['rubricmustarray'] = 'La respuesta a la rúbrica debe ser una matriz.';
 $string['rubricsuccess'] = 'Rúbrica inyectada con éxito';

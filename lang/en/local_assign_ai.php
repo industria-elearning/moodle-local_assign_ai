@@ -72,6 +72,7 @@ $string['reloadpage'] = 'Please reload the page to see the updated results.';
 $string['review'] = 'Review';
 $string['reviewall'] = 'Review all';
 $string['reviewwithai'] = 'Review with AI';
+$string['error_ws_not_configured'] = 'AI review actions are unavailable because the Datacurso web service is not configured. Complete the setup at <a href="{$a->url}">Datacurso webservice setup</a> or contact your administrator.';
 $string['rubricfailed'] = 'Failed to inject rubric after 20 attempts';
 $string['rubricmustarray'] = 'rubric_response must be an array';
 $string['rubricsuccess'] = 'Rubric successfully injected';
