@@ -130,7 +130,6 @@ class observer {
         global $DB;
 
         try {
-
             $assign = $event->get_assign();
             if (!$assign) {
                 return;
