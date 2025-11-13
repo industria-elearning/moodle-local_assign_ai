@@ -41,6 +41,13 @@ try {
     // Instantiate the assign object.
     $assign = new assign($context, $cm, $course);
 
+    // Validate Datacurso AI provider configuration.
+    if (!\aiprovider_datacurso\webservice_config::is_configured()) {
+        $setupurl = \aiprovider_datacurso\webservice_config::get_url();
+        $messageparams = (object)['url' => $setupurl->out(false)];
+        \core\notification::error(get_string('error_ws_not_configured', 'local_assign_ai', $messageparams));
+    }
+
     // Page configuration.
     $PAGE->set_url(new moodle_url('/local/assign_ai/review.php', ['id' => $cmid]));
     $PAGE->set_course($course);
@@ -51,13 +58,17 @@ try {
     $PAGE->requires->js_call_amd('local_assign_ai/review_with_ai', 'init');
     $PAGE->requires->css('/local/assign_ai/styles/review.css');
 
-    // Migas de pan: nombre de la actividad -> página actual.
-    $PAGE->navbar->add(format_string($assign->get_instance()->name), new moodle_url('/mod/assign/view.php', ['id' => $cmid]));
-    $PAGE->navbar->add(get_string('reviewwithai', 'local_assign_ai'));
-
     $PAGE->activityheader->disable();
 
     echo $OUTPUT->header();
+
+    // Back to course button.
+    $backurl = new moodle_url('/course/view.php', ['id' => $course->id]);
+    echo html_writer::link(
+        $backurl,
+        get_string('backtocourse', 'local_assign_ai'),
+        ['class' => 'btn btn-secondary mb-3']
+    );
 
     // Get the list of enrolled users with submission capability.
     $students = get_enrolled_users($context, 'mod/assign:submit');
