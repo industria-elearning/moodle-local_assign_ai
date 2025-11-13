@@ -31,6 +31,7 @@ $string['aitaskdone'] = 'AI processing complete. Total submissions processed: {$
 $string['aitaskstart'] = 'Processing AI submissions for course: {$a}';
 $string['aitaskuserqueued'] = 'Submission queued for user ID {$a->id} ({$a->name})';
 $string['altlogo'] = 'Datacurso logo';
+$string['backtocourse'] = 'Back to course';
 $string['assign_ai:changestatus'] = 'Change AI approval status';
 $string['assign_ai:review'] = 'Review AI suggestions for assignments';
 $string['assign_ai:viewdetails'] = 'View AI feedback details';

@@ -31,6 +31,7 @@ $string['aitaskdone'] = 'Procesamiento de IA completado. Total de envíos proces
 $string['aitaskstart'] = 'Procesando envíos de IA para el curso: {$a}';
 $string['aitaskuserqueued'] = 'Envío en cola para el usuario con ID {$a->id} ({$a->name})';
 $string['altlogo'] = 'Logo Datacurso';
+$string['backtocourse'] = 'Regresar al curso';
 $string['assign_ai:changestatus'] = 'Cambiar el estado de aprobación de IAs';
 $string['assign_ai:review'] = 'Revisar las sugerencias de IA para las tareas';
 $string['assign_ai:viewdetails'] = 'Ver detalles de comentarios de IA';

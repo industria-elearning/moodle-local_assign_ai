@@ -59,6 +59,14 @@ try {
 
     echo $OUTPUT->header();
 
+    // Back to course button.
+    $backurl = new moodle_url('/course/view.php', ['id' => $course->id]);
+    echo html_writer::link(
+        $backurl,
+        get_string('backtocourse', 'local_assign_ai'),
+        ['class' => 'btn btn-secondary mb-3']
+    );
+
     // Get the list of enrolled users with submission capability.
     $students = get_enrolled_users($context, 'mod/assign:submit');
 
