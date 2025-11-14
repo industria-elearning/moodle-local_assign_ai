@@ -144,7 +144,9 @@ try {
         $lastmodified = '-';
         $filelinks = '-';
 
-        if ($submission && $submission->status === 'submitted') {
+        $issubmitted = $submission && $submission->status === 'submitted';
+
+        if ($issubmitted) {
             if (!empty($submission->timemodified)) {
                 $lastmodified = userdate($submission->timemodified);
             }
@@ -177,15 +179,30 @@ try {
         }
 
         // AI status.
-        $record = $DB->get_record('local_assign_ai_pending', [
+        $sql = "SELECT *
+                  FROM {local_assign_ai_pending}
+                 WHERE courseid = :courseid
+                   AND assignmentid = :assignmentid
+                   AND userid = :userid
+              ORDER BY timemodified DESC, id DESC";
+        $dbparams = [
             'courseid' => $course->id,
             'assignmentid' => $cm->id,
             'userid' => $student->id,
-        ]);
+        ];
+        $record = $DB->get_record_sql($sql, $dbparams, IGNORE_MULTIPLE);
         $grade = '-';
+        $submissiontimemod = $submission->timemodified ?? 0;
 
         if ($record && $record->status === 'approve') {
-            // Hide submissions that were already approved and saved.
+            if (!$submissiontimemod || $submissiontimemod <= (int)$record->timemodified) {
+                continue;
+            }
+            // There is a newer submission after the approved review; ignore the old record.
+            $record = null;
+        }
+
+        if (!$record && !$issubmitted) {
             continue;
         }
 

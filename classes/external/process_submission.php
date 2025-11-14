@@ -202,15 +202,15 @@ class process_submission extends external_api {
             return null;
         }
 
-        // Check if record already exists.
-        $existing = $DB->get_record('local_assign_ai_pending', [
+        // Skip creating duplicates while a review is already pending.
+        $pending = $DB->get_record('local_assign_ai_pending', [
             'courseid' => $course->id,
             'assignmentid' => $cmid,
             'userid' => $student->id,
+            'status' => 'pending',
         ]);
-
-        if ($existing) {
-            return $existing->approval_token;
+        if ($pending) {
+            return $pending->approval_token;
         }
 
         // Create new pending record.
