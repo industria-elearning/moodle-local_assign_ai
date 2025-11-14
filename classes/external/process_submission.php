@@ -95,7 +95,6 @@ class process_submission extends external_api {
                 'cmid' => $cmid,
                 'courseid' => $course->id,
             ]);
-            $task->set_component('local_assign_ai');
             \core\task\manager::queue_adhoc_task($task);
 
             return [
@@ -150,7 +149,7 @@ class process_submission extends external_api {
      * @return string|null The approval token generated or found, or null on failure.
      */
     public static function process_submission_ai(\assign $assign, $course, $student, $DB, $countmode = false) {
-        global $CFG;
+        global $CFG, $USER;
 
         $submission = $assign->get_user_submission($student->id, false);
         if (!$submission || $submission->status !== 'submitted') {
@@ -203,19 +202,20 @@ class process_submission extends external_api {
             return null;
         }
 
-        // Check if record already exists.
-        $existing = $DB->get_record('local_assign_ai_pending', [
+        // Skip creating duplicates while a review is already pending.
+        $pending = $DB->get_record('local_assign_ai_pending', [
             'courseid' => $course->id,
             'assignmentid' => $cmid,
             'userid' => $student->id,
+            'status' => 'pending',
         ]);
-
-        if ($existing) {
-            return $existing->approval_token;
+        if ($pending) {
+            return $pending->approval_token;
         }
 
         // Create new pending record.
         $token = bin2hex(random_bytes(16));
+        $now = time();
         $record = (object)[
             'courseid' => $course->id,
             'assignmentid' => $cmid,
@@ -226,9 +226,21 @@ class process_submission extends external_api {
             'rubric_response' => isset($data['rubric']) ? json_encode($data['rubric'], JSON_UNESCAPED_UNICODE) : null,
             'status' => 'pending',
             'approval_token' => $token,
-            'timemodified' => time(),
+            'usermodified' => $USER->id ?? null,
+            'timecreated' => $now,
+            'timemodified' => $now,
         ];
-        $DB->insert_record('local_assign_ai_pending', $record);
+        $record->id = $DB->insert_record('local_assign_ai_pending', $record);
+
+        if (local_assign_ai_is_autograde_enabled($assign)) {
+            $record->status = 'approve';
+            $record->timemodified = time();
+            if (!empty($USER->id)) {
+                $record->usermodified = $USER->id;
+            }
+            $DB->update_record('local_assign_ai_pending', $record);
+            local_assign_ai_apply_ai_feedback($assign, $record, $record->usermodified ?? null);
+        }
 
         return $token;
     }
