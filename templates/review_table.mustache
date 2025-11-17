@@ -50,10 +50,36 @@
             <td>{{email}}</td>
             <td>{{status}}</td>
             <td>{{lastmodified}}</td>
-            <td>{{{files}}}</td>
+            <td>
+                {{#files}}
+                    <a href="{{url}}">{{name}}</a>
+                {{/files}}
+                {{^files}}-
+                {{/files}}
+            </td>
             <td>{{grade}}</td>
-            <td>{{aistatus}}</td>
-            <td>{{{actions}}}</td>
+            <td>
+                {{#isinitial}}{{#str}} aistatus_initial_short, local_assign_ai {{/str}}{{/isinitial}}
+                {{#ispending}}{{#str}} aistatus_pending_short, local_assign_ai {{/str}}{{/ispending}}
+            </td>
+            <td>
+                <div class="local_assign_ai_action-buttons">
+                    <a class="btn btn-primary btn-sm text-nowrap" href="{{graderurl}}">{{#str}} qualify, local_assign_ai {{/str}}</a>
+                    <button class="btn btn-success btn-sm text-nowrap view-details"
+                        data-courseid="{{courseid}}"
+                        data-cmid="{{cmid}}"
+                        data-userid="{{userid}}" {{#isinitial}}disabled{{/isinitial}}>
+                        {{#str}} viewdetails, local_assign_ai {{/str}}
+                    </button>
+                    <button class="btn btn-warning btn-sm text-nowrap js-review-ai"
+                        type="button"
+                        data-cmid="{{cmid}}"
+                        data-userid="{{userid}}"
+                        data-pendingid="{{pendingid}}" {{#ispending}}disabled{{/ispending}}>
+                        {{#str}} review, local_assign_ai {{/str}}
+                    </button>
+                </div>
+            </td>
         </tr>
         {{/rows}}
         {{^rows}}
@@ -63,9 +89,3 @@
         {{/rows}}
     </tbody>
 </table>
-
-{{#headerlogo}}
-<a class="local_assign_ai-logo-wrapper" href="https://datacurso.com/" target="_blank" rel="noopener noreferrer">
-    <img src="{{logourl}}" alt="{{alttext}}" class="local_assign_ai-pluginlogo">
-</a>
-{{/headerlogo}}

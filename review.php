@@ -64,14 +64,6 @@ try {
 
     echo $OUTPUT->header();
 
-    // Back to course button.
-    $backurl = new moodle_url('/course/view.php', ['id' => $course->id]);
-    echo html_writer::link(
-        $backurl,
-        get_string('backtocourse', 'local_assign_ai'),
-        ['class' => 'btn btn-secondary mb-3']
-    );
-
     // Get the list of enrolled users with submission capability.
     $students = get_enrolled_users($context, 'mod/assign:submit');
 
@@ -83,46 +75,28 @@ try {
             'assignmentid' => $cm->id,
             'userid' => $student->id,
         ]);
-        if (!$record || $record->status === 'rejected') {
+        if (!$record || $record->status === assign_submission::STATUS_REJECTED) {
             $allblocked = false;
             break;
         }
     }
 
-    // Title + "review all" button in the same row.
-    echo html_writer::start_div('d-flex justify-content-between align-items-center mb-3');
-    echo $OUTPUT->heading(get_string('reviewwithai', 'local_assign_ai'), 2, 'mb-0');
-
-    $reviewallurl = new moodle_url('/local/assign_ai/review_submission.php', [
-        'id' => $cmid,
-        'all' => 1,
-    ]);
-
-    if ($allblocked) {
-        // Disabled button.
-        echo html_writer::tag('button', get_string('reviewall', 'local_assign_ai'), [
-            'class' => 'btn btn-warning',
-            'disabled' => 'disabled',
-        ]);
-    } else {
-        // Active button.
-        echo html_writer::tag(
-            'button',
-            get_string('reviewall', 'local_assign_ai'),
-            [
-                'type' => 'button',
-                'class' => 'btn btn-warning js-review-ai',
-                'data-cmid' => $cmid,
-                'data-all' => 1,
-            ]
-        );
-    }
-    echo html_writer::end_div();
-
     $rows = [];
 
-    foreach ($students as $student) {
-        // Submission status.
+    // Build table from pending records with status initial or pending.
+    $select = "courseid = :courseid AND assignmentid = :assignmentid AND status IN (:s1, :s2)";
+    $params = [
+        'courseid' => $course->id,
+        'assignmentid' => $cm->id,
+        's1' => assign_submission::STATUS_INITIAL,
+        's2' => assign_submission::STATUS_PENDING,
+    ];
+    $pendings = $DB->get_records_select('local_assign_ai_pending', $select, $params, 'timemodified DESC, id DESC');
+
+    foreach ($pendings as $record) {
+        $student = $DB->get_record('user', ['id' => $record->userid], '*', MUST_EXIST);
+
+        // Submission info.
         $submission = $assign->get_user_submission($student->id, false);
         if ($submission) {
             switch ($submission->status) {
@@ -142,17 +116,12 @@ try {
             $status = get_string('submission_none', 'local_assign_ai');
         }
 
-        // Last modification and submitted files.
         $lastmodified = '-';
-        $filelinks = '-';
-
-        $issubmitted = $submission && $submission->status === 'submitted';
-
-        if ($issubmitted) {
+        $filesout = [];
+        if ($submission) {
             if (!empty($submission->timemodified)) {
                 $lastmodified = userdate($submission->timemodified);
             }
-
             $fs = get_file_storage();
             $files = $fs->get_area_files(
                 $assign->get_context()->id,
@@ -162,9 +131,7 @@ try {
                 'id',
                 false
             );
-
             if ($files) {
-                $filelinksarr = [];
                 foreach ($files as $file) {
                     $url = moodle_url::make_pluginfile_url(
                         $file->get_contextid(),
@@ -174,148 +141,57 @@ try {
                         $file->get_filepath(),
                         $file->get_filename()
                     );
-                    $filelinksarr[] = html_writer::link($url, $file->get_filename());
+                    $filesout[] = [
+                        'url' => $url->out(false),
+                        'name' => $file->get_filename(),
+                    ];
                 }
-                $filelinks = implode(', ', $filelinksarr);
             }
         }
 
-        // AI status.
-        $sql = "SELECT *
-                  FROM {local_assign_ai_pending}
-                 WHERE courseid = :courseid
-                   AND assignmentid = :assignmentid
-                   AND userid = :userid
-              ORDER BY timemodified DESC, id DESC";
-        $dbparams = [
-            'courseid' => $course->id,
-            'assignmentid' => $cm->id,
-            'userid' => $student->id,
-        ];
-        $record = $DB->get_record_sql($sql, $dbparams, IGNORE_MULTIPLE);
-        $grade = '-';
-        $submissiontimemod = $submission->timemodified ?? 0;
+        $grade = $record->grade !== null ? $record->grade : '-';
+        $isinitial = ($record->status === assign_submission::STATUS_INITIAL);
+        $ispending = ($record->status === assign_submission::STATUS_PENDING);
 
-        if ($record && $record->status === 'approve') {
-            if (!$submissiontimemod || $submissiontimemod <= (int)$record->timemodified) {
-                continue;
-            }
-            // There is a newer submission after the approved review; ignore the old record.
-            $record = null;
-        }
-
-        if (!$record && !$issubmitted) {
-            continue;
-        }
-
-        if ($record) {
-            switch ($record->status) {
-                case 'approve':
-                    $aistatus = get_string('statusapprove', 'local_assign_ai');
-                    break;
-                case 'rejected':
-                    $aistatus = get_string('statusrejected', 'local_assign_ai');
-                    break;
-                case 'pending':
-                default:
-                    $aistatus = get_string('statuspending', 'local_assign_ai');
-            }
-
-            $aibutton = html_writer::tag(
-                'button',
-                get_string('viewdetails', 'local_assign_ai'),
-                ['class' => 'btn btn-success btn-sm text-nowrap view-details', 'data-token' => $record->approval_token]
-            );
-
-            if ($record->grade !== null) {
-                $grade = $record->grade;
-            }
-        } else {
-            $aistatus = get_string('nostatus', 'local_assign_ai');
-            $aibutton = html_writer::tag(
-                'button',
-                get_string('viewdetails', 'local_assign_ai'),
-                ['class' => 'btn btn-success btn-sm text-nowrap view-details', 'disabled' => 'disabled']
-            );
-        }
-
-        // Blue button → grader.
-        if ($record && !empty($record->approval_token)) {
-            $viewurl = new moodle_url('/mod/assign/view.php', [
-                'id' => $cmid,
-                'action' => 'grader',
-                'userid' => $student->id,
-                'aitoken' => $record->approval_token,
-            ]);
-        } else {
-            $viewurl = new moodle_url('/mod/assign/view.php', [
-                'id' => $cmid,
-                'action' => 'grader',
-                'userid' => $student->id,
-            ]);
-        }
-
-        $button = html_writer::link(
-            $viewurl,
-            get_string('qualify', 'local_assign_ai'),
-            ['class' => 'btn btn-primary btn-sm text-nowrap']
-        );
-
-        // Gray button → review AI per user.
-        $reviewurl = new moodle_url('/local/assign_ai/review_submission.php', [
+        // Build row data for template-only rendering.
+        $graderurl = new moodle_url('/mod/assign/view.php', [
             'id' => $cmid,
+            'action' => 'grader',
             'userid' => $student->id,
         ]);
-
-        if ($record && in_array($record->status, [assign_submission::STATUS_PENDING, assign_submission::STATUS_APPROVED])) {
-            $reviewbtn = html_writer::tag(
-                'button',
-                get_string('review', 'local_assign_ai'),
-                ['class' => 'btn btn-warning btn-sm text-nowrap', 'disabled' => 'disabled']
-            );
-        } else {
-            $reviewbtn = html_writer::tag(
-                'button',
-                get_string('review', 'local_assign_ai'),
-                [
-                'type' => 'button',
-                'class' => 'btn btn-warning btn-sm text-nowrap js-review-ai',
-                'data-cmid' => $cmid,
-                'data-userid' => $student->id,
-                ]
-            );
-        }
-
-        $actions = html_writer::div(
-            $button . $aibutton . $reviewbtn,
-            'local_assign_ai_action-buttons '
-        );
 
         $rows[] = [
             'fullname' => fullname($student),
             'email' => $student->email,
             'status' => $status,
             'lastmodified' => $lastmodified,
-            'files' => $filelinks,
-            'aistatus' => $aistatus,
+            'files' => $filesout,
             'grade' => $grade,
-            'actions' => $actions,
+            'isinitial' => $isinitial,
+            'ispending' => $ispending,
+            'courseid' => $course->id,
+            'cmid' => $cmid,
+            'userid' => $student->id,
+            'pendingid' => $record->id,
+            'graderurl' => $graderurl->out(false),
         ];
     }
 
     $renderer = $PAGE->get_renderer('core');
     $headerlogo = new \local_assign_ai\output\header_logo();
     $logocontext = $headerlogo->export_for_template($renderer);
+
     $templatecontext = [
+        'backurl' => (new moodle_url('/course/view.php', ['id' => $course->id]))->out(false),
         'rows' => $rows,
+        'allblocked' => $allblocked,
+        'cmid' => $cmid,
+        'courseid' => $course->id,
         'headerlogo' => $logocontext,
         'alttext' => get_string('altlogo', 'local_assign_ai'),
     ];
 
-    echo $OUTPUT->render_from_template('local_assign_ai/review_table', $templatecontext);
-    echo $OUTPUT->footer();
-} catch (\Throwable $th) {
-    \core\notification::error($e->getMessage());
+    echo $OUTPUT->render_from_template('local_assign_ai/review_page', $templatecontext);
     echo $OUTPUT->footer();
 } catch (Exception $e) {
     \core\notification::error(get_string('unexpectederror', 'local_assign_ai', $e->getMessage()));
