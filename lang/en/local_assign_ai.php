@@ -77,6 +77,8 @@ $string['backtoreview'] = 'Back to AI review';
 $string['aiconfigheader'] = 'Datacurso Assignment AI';
 $string['autograde'] = 'Auto-approve AI feedback';
 $string['autograde_help'] = 'When enabled, AI-generated grades and comments are applied automatically to student submissions without requiring manual approval.';
+$string['autogradegrader'] = 'Recorded grader for auto approvals';
+$string['autogradegrader_help'] = 'Select the user who will be recorded as the grader whenever AI feedback is auto approved. Only users who can grade assignments in this course are listed.';
 $string['error_ws_not_configured'] = 'AI review actions are unavailable because the Datacurso web service is not configured. Complete the setup at <a href="{$a->url}">Datacurso webservice setup</a> or contact your administrator.';
 $string['rubricfailed'] = 'Failed to inject rubric after 20 attempts';
 $string['rubricmustarray'] = 'rubric_response must be an array';

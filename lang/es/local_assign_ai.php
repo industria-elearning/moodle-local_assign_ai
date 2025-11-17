@@ -77,6 +77,8 @@ $string['backtoreview'] = 'Volver a Revisión con IA';
 $string['aiconfigheader'] = 'Datacurso Assignment AI';
 $string['autograde'] = 'Aprobar automáticamente la retroalimentación de IA';
 $string['autograde_help'] = 'Si está habilitado, las calificaciones y comentarios generados por la IA se aplican automáticamente a los envíos del estudiante sin que el docente intervenga.';
+$string['autogradegrader'] = 'Usuario calificador para aprobaciones automáticas';
+$string['autogradegrader_help'] = 'Selecciona al usuario que se registrará como calificador cuando la retroalimentación de IA se apruebe automáticamente. Solo se listan usuarios con permiso para calificar en este curso.';
 $string['error_ws_not_configured'] = 'Las acciones de revisión de actividades con IA no están disponibles porque el servicio web de Datacurso no está configurado. Complete la configuración en <a href="{$a->url}">Configuración de servicio web Datacurso</a> o contacte a su administrador.';
 $string['rubricfailed'] = 'No se logró inyectar la rúbrica después de 20 intentos';
 $string['rubricmustarray'] = 'La respuesta a la rúbrica debe ser una matriz.';
