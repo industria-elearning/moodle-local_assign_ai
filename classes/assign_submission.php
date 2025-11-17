@@ -73,14 +73,17 @@ class assign_submission {
      * pending record with the AI response, and applies the feedback (grade/comments).
      * Otherwise, only creates a pending record for later manual review.
      *
-     * @param int $userid User ID of the author of the submission.
-     * @param \assign $assign Assig instance.
      * @return void
      */
     public function process_submission_ai(): void {
         global $DB;
 
         if (!$this->submission || !$this->user) {
+            return;
+        }
+
+        // Only process submitted attempts.
+        if ($this->submission->status !== ASSIGN_SUBMISSION_STATUS_SUBMITTED) {
             return;
         }
 
@@ -127,6 +130,47 @@ class assign_submission {
         if ($record && !empty($config) && !empty($config->graderid)) {
             local_assign_ai_apply_ai_feedback($this->assign, $record, $config->graderid);
         }
+    }
+
+    /**
+     * Processes a submission for the "Review with AI" action.
+     *
+     * Always sends the submission payload to the AI provider (regardless of
+     * autograde setting) and stores the AI response in the pending table with
+     * status set to STATUS_PENDING for manual review/approval.
+     *
+     * Requirements:
+     *  - The user must have a submission with status ASSIGN_SUBMISSION_STATUS_SUBMITTED.
+     *
+     * @param int $pendingid Pending record ID to update in local_assign_ai_pending.
+     * @return void
+     */
+    public function process_submission_ai_review(int $pendingid): void {
+        global $DB;
+        if (!$this->submission || !$this->user) {
+            return;
+        }
+        if ($this->submission->status !== ASSIGN_SUBMISSION_STATUS_SUBMITTED) {
+            return;
+        }
+
+        // Find existing pending record to update.
+        $existing = $DB->get_record('local_assign_ai_pending', ['id' => $pendingid], '*', MUST_EXIST);
+
+        $payload = $this->build_payload();
+        $response = client::send_to_ai($payload);
+
+        $message = $response['reply'] ?? null;
+        $grade = isset($response['grade']) ? (is_numeric($response['grade']) ? (float)$response['grade'] : null) : null;
+        $rubricresponse = json_encode($response['rubric'], JSON_UNESCAPED_UNICODE) ?? null;
+
+        $data = [
+            'message' => $message,
+            'grade' => $grade !== null ? (int)round($grade) : null,
+            'rubric_response' => $rubricresponse,
+            'status' => self::STATUS_PENDING,
+        ];
+        self::update_pending_submission($existing->id, $data);
     }
 
     /**
