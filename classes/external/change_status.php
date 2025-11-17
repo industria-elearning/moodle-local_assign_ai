@@ -42,7 +42,9 @@ class change_status extends external_api {
      */
     public static function execute_parameters() {
         return new external_function_parameters([
-            'token'  => new external_value(PARAM_ALPHANUM, 'Approval token', VALUE_REQUIRED),
+            'courseid' => new external_value(PARAM_INT, 'Course ID', VALUE_REQUIRED),
+            'cmid' => new external_value(PARAM_INT, 'Course module ID', VALUE_REQUIRED),
+            'userid' => new external_value(PARAM_INT, 'User ID', VALUE_REQUIRED),
             'action' => new external_value(PARAM_ALPHA, 'Action: approve or rejected', VALUE_REQUIRED),
         ]);
     }
@@ -50,20 +52,26 @@ class change_status extends external_api {
     /**
      * Executes the external function.
      *
-     * @param string $token The approval token.
+     * @param int $courseid Course ID.
+     * @param int $cmid Course module ID.
+     * @param int $userid User ID.
      * @param string $action The action to apply (approve or rejected).
      * @return array The result of the operation.
      */
-    public static function execute($token, $action) {
+    public static function execute($courseid, $cmid, $userid, $action) {
         global $DB, $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
-            'token'  => $token,
+            'courseid' => $courseid,
+            'cmid' => $cmid,
+            'userid' => $userid,
             'action' => $action,
         ]);
 
         $record = $DB->get_record('local_assign_ai_pending', [
-            'approval_token' => $params['token'],
+            'courseid' => $params['courseid'],
+            'assignmentid' => $params['cmid'],
+            'userid' => $params['userid'],
         ], '*', MUST_EXIST);
 
         $cm = get_coursemodule_from_id('assign', $record->assignmentid, 0, false, MUST_EXIST);
