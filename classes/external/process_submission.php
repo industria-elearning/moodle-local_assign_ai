@@ -104,13 +104,9 @@ class process_submission extends external_api {
         // Process a single user submission directly using assign_submission logic.
         if ($userid) {
             $student = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
-            $submission = $assign->get_user_submission($student->id, false);
-            if ($submission && $submission->status === ASSIGN_SUBMISSION_STATUS_SUBMITTED) {
-                $proc = new \local_assign_ai\assign_submission($student->id, $assign);
-                // Force processing regardless of autograde setting, leaving status as pending; update existing pending.
-                $proc->process_submission_ai_review($pendingid ?: null);
-                $processed++;
-            }
+            $proc = new \local_assign_ai\assign_submission($student->id, $assign);
+            $proc->process_submission_ai_review($pendingid);
+            $processed++;
         }
 
         return [
