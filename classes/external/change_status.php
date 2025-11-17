@@ -82,7 +82,7 @@ class change_status extends external_api {
             $context = \context_module::instance($cm->id);
             $course = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST);
             $assign = new \assign($context, $cm, $course);
-            local_assign_ai_apply_ai_feedback($assign, $record, $USER->id ?? null);
+            local_assign_ai_apply_ai_feedback($assign, $record, $USER->id);
         }
 
         return [
