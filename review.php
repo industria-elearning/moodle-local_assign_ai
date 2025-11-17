@@ -67,31 +67,22 @@ try {
     // Get the list of enrolled users with submission capability.
     $students = get_enrolled_users($context, 'mod/assign:submit');
 
-    // Check if all students have feedback pending or approved.
-    $allblocked = true;
-    foreach ($students as $student) {
-        $record = $DB->get_record('local_assign_ai_pending', [
-            'courseid' => $course->id,
-            'assignmentid' => $cm->id,
-            'userid' => $student->id,
-        ]);
-        if (!$record || $record->status === assign_submission::STATUS_REJECTED) {
-            $allblocked = false;
-            break;
-        }
-    }
+    $pendingcount = $DB->count_records('local_assign_ai_pending', [
+        'courseid' => $course->id,
+        'assignmentid' => $cm->id,
+        'status' => assign_submission::STATUS_INITIAL,
+    ]);
+    $allblocked = ($pendingcount === 0);
 
     $rows = [];
 
     // Build table from pending records with status initial or pending.
-    $select = "courseid = :courseid AND assignmentid = :assignmentid AND status IN (:s1, :s2)";
-    $params = [
-        'courseid' => $course->id,
-        'assignmentid' => $cm->id,
-        's1' => assign_submission::STATUS_INITIAL,
-        's2' => assign_submission::STATUS_PENDING,
-    ];
-    $pendings = $DB->get_records_select('local_assign_ai_pending', $select, $params, 'timemodified DESC, id DESC');
+    $statuses = [assign_submission::STATUS_INITIAL, assign_submission::STATUS_PENDING];
+    list($insql, $inparams) = $DB->get_in_or_equal($statuses, SQL_PARAMS_NAMED, 'st');
+    $select = "courseid = :courseid AND assignmentid = :assignmentid AND status $insql";
+    $inparams['courseid'] = $course->id;
+    $inparams['assignmentid'] = $cm->id;
+    $pendings = $DB->get_records_select('local_assign_ai_pending', $select, $inparams, 'timemodified DESC, id DESC');
 
     foreach ($pendings as $record) {
         $student = $DB->get_record('user', ['id' => $record->userid], '*', MUST_EXIST);
