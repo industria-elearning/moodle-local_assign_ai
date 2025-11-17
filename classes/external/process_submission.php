@@ -56,7 +56,7 @@ class process_submission extends external_api {
                 VALUE_DEFAULT,
                 false
             ),
-
+            'pendingid' => new external_value(PARAM_INT, 'Existing pending record id (for review update)', VALUE_DEFAULT, 0),
         ]);
     }
 
@@ -70,12 +70,11 @@ class process_submission extends external_api {
      * @param int $cmid The course module ID.
      * @param int $userid The user ID (0 for all users).
      * @param bool $all Whether to process all submissions (queued task) or a single one.
+     * @param int $pendingid Existing pending record id to update when reviewing with AI (0 to skip).
      * @return array An associative array containing the processing result.
      */
-    public static function execute($cmid, $userid = 0, $all = false) {
-        global $DB, $CFG;
-
-        require_login();
+    public static function execute($cmid, $userid = 0, $all = false, $pendingid = 0) {
+        global $DB;
 
         $cm = get_coursemodule_from_id('assign', $cmid, 0, false, MUST_EXIST);
         $course = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST);
@@ -86,7 +85,6 @@ class process_submission extends external_api {
 
         $assign = new \assign($context, $cm, $course);
         $processed = 0;
-        $token = null;
 
         // If processing all submissions → queue background task.
         if ($all) {
@@ -100,15 +98,17 @@ class process_submission extends external_api {
             return [
                 'status' => 'queued',
                 'processed' => 0,
-                'token' => '',
             ];
         }
 
-        // Process a single user submission directly.
+        // Process a single user submission directly using assign_submission logic.
         if ($userid) {
             $student = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
-            $token = self::process_submission_ai($assign, $course, $student, $DB);
-            if ($token) {
+            $submission = $assign->get_user_submission($student->id, false);
+            if ($submission && $submission->status === ASSIGN_SUBMISSION_STATUS_SUBMITTED) {
+                $proc = new \local_assign_ai\assign_submission($student->id, $assign);
+                // Force processing regardless of autograde setting, leaving status as pending; update existing pending.
+                $proc->process_submission_ai_review($pendingid ?: null);
                 $processed++;
             }
         }
@@ -116,7 +116,6 @@ class process_submission extends external_api {
         return [
             'status' => 'ok',
             'processed' => $processed,
-            'token' => $token ?? '',
         ];
     }
 
@@ -129,109 +128,6 @@ class process_submission extends external_api {
         return new external_single_structure([
             'status' => new external_value(PARAM_TEXT, 'Processing status (ok, queued, or error)'),
             'processed' => new external_value(PARAM_INT, 'Number of processed submissions'),
-            'token' => new external_value(PARAM_TEXT, 'Approval token if available'),
         ]);
-    }
-
-    /**
-     * Internal helper to process a single assignment submission via AI.
-     *
-     * This method compiles the submission data (either file or online text),
-     * sends it to the AI service, and stores the pending result in the
-     * `local_assign_ai_pending` table. If a record already exists for the
-     * same user and assignment, it simply returns the existing token.
-     *
-     * @param \assign $assign The assignment instance.
-     * @param \stdClass $course The course object.
-     * @param \stdClass $student The student whose submission is processed.
-     * @param \moodle_database $DB Moodle database global.
-     * @param bool $countmode Whether to run in counting-only mode (default false).
-     * @return string|null The approval token generated or found, or null on failure.
-     */
-    public static function process_submission_ai(\assign $assign, $course, $student, $DB, $countmode = false) {
-        global $CFG, $USER;
-
-        $submission = $assign->get_user_submission($student->id, false);
-        if (!$submission || $submission->status !== 'submitted') {
-            return null;
-        }
-
-        $assignment = $assign->get_instance();
-        $cmid = $assign->get_course_module()->id;
-
-        // Retrieve submission content (files or online text).
-        $fs = get_file_storage();
-        $files = $fs->get_area_files(
-            $assign->get_context()->id,
-            'assignsubmission_file',
-            'submission_files',
-            $submission->id,
-            'id',
-            false
-        );
-
-        $submissioncontent = null;
-        if (empty($files)) {
-            $onlinetext = $DB->get_record('assignsubmission_onlinetext', ['submission' => $submission->id]);
-            if ($onlinetext && !empty($onlinetext->onlinetext)) {
-                $submissioncontent = $onlinetext->onlinetext;
-            }
-        }
-
-        // Prepare payload for the AI service.
-        $payload = [
-            'site_id' => md5($CFG->wwwroot),
-            'course_id' => (string)$course->id,
-            'course' => $course->fullname,
-            'assignment_id' => (string)$assignment->id,
-            'cmi_id' => (string)$cmid,
-            'assignment_title' => $assignment->name,
-            'assignment_description' => $assignment->intro,
-            'rubric' => local_assign_ai_build_rubric_json($assign),
-            'userid' => (string)$student->id,
-            'student_name' => fullname($student),
-            'submission_assign' => $submissioncontent,
-            'maximum_grade' => (int)$assignment->grade,
-        ];
-
-        // Send to AI client.
-        try {
-            $data = client::send_to_ai($payload);
-        } catch (\Throwable $e) {
-            debugging('AI request failed: ' . $e->getMessage(), DEBUG_DEVELOPER);
-            return null;
-        }
-
-        // Skip creating duplicates while a review is already pending.
-        $pending = $DB->get_record('local_assign_ai_pending', [
-            'courseid' => $course->id,
-            'assignmentid' => $cmid,
-            'userid' => $student->id,
-            'status' => 'pending',
-        ]);
-        if ($pending) {
-            return $pending->approval_token;
-        }
-
-        // Create new pending record.
-        $token = bin2hex(random_bytes(16));
-        $now = time();
-        $record = (object)[
-            'courseid' => $course->id,
-            'assignmentid' => $cmid,
-            'title' => $assignment->name,
-            'userid' => $student->id,
-            'message' => $data['reply'] ?? '',
-            'grade' => $data['grade'] ?? null,
-            'rubric_response' => isset($data['rubric']) ? json_encode($data['rubric'], JSON_UNESCAPED_UNICODE) : null,
-            'status' => 'pending',
-            'approval_token' => $token,
-            'usermodified' => $USER->id ?? null,
-            'timecreated' => $now,
-            'timemodified' => $now,
-        ];
-        $record->id = $DB->insert_record('local_assign_ai_pending', $record);
-
-        return $token;
     }
 }
