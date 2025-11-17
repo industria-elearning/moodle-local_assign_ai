@@ -119,10 +119,10 @@ function local_assign_ai_is_autograde_enabled(assign $assign): bool {
  *
  * @param assign $assign Assignment instance.
  * @param stdClass $record Pending AI record.
- * @param int|null $graderid User applying the change.
+ * @param int $graderid User applying the change.
  * @return void
  */
-function local_assign_ai_apply_ai_feedback(assign $assign, stdClass $record, ?int $graderid = null): void {
+function local_assign_ai_apply_ai_feedback(assign $assign, stdClass $record, int $graderid): void {
     global $DB;
 
     $grade = $assign->get_user_grade($record->userid, true);
@@ -138,9 +138,7 @@ function local_assign_ai_apply_ai_feedback(assign $assign, stdClass $record, ?in
         if ($instancegrade > 0) {
             $gradevalue = max(0, min((float)$record->grade, $instancegrade));
             $grade->grade = $gradevalue;
-            if ($graderid) {
-                $grade->grader = $graderid;
-            }
+            $grade->grader = $graderid;
             $gradepushed = $assign->update_grade($grade);
         } else {
             debugging('The assignment uses a scale; automatic numeric grading is not supported.', DEBUG_DEVELOPER);
