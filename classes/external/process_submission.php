@@ -232,16 +232,6 @@ class process_submission extends external_api {
         ];
         $record->id = $DB->insert_record('local_assign_ai_pending', $record);
 
-        if (local_assign_ai_is_autograde_enabled($assign)) {
-            $record->status = 'approve';
-            $record->timemodified = time();
-            if (!empty($USER->id)) {
-                $record->usermodified = $USER->id;
-            }
-            $DB->update_record('local_assign_ai_pending', $record);
-            local_assign_ai_apply_ai_feedback($assign, $record, $record->usermodified ?? null);
-        }
-
         return $token;
     }
 }
