@@ -64,30 +64,28 @@ class process_all_submissions extends adhoc_task {
         $context = \context_module::instance($cm->id);
 
         $assign = new \assign($context, $cm, $course);
-        $students = get_enrolled_users($context, 'mod/assign:submit');
 
         mtrace(get_string('aitaskstart', 'local_assign_ai', $course->fullname));
 
         $processed = 0;
 
-        foreach ($students as $student) {
-            // Reuse the helper function from the external service.
-            $token = \local_assign_ai\external\process_submission::process_submission_ai(
-                $assign,
-                $course,
-                $student,
-                $DB,
-                false
-            );
+        // Obtain pending records to review (status = initial) for this assignment.
+        $pendings = $DB->get_records('local_assign_ai_pending', [
+            'courseid' => $course->id,
+            'assignmentid' => $cm->id,
+            'status' => \local_assign_ai\assign_submission::STATUS_INITIAL,
+        ]);
 
-            if ($token) {
-                $processed++;
-                $params = [
-                    'id' => $student->id,
-                    'name' => $student->firstname,
-                ];
-                mtrace(get_string('aitaskuserqueued', 'local_assign_ai', $params));
-            }
+        foreach ($pendings as $pending) {
+            $proc = new \local_assign_ai\assign_submission($pending->userid, $assign);
+            $proc->process_submission_ai_review($pending->id);
+
+            $processed++;
+            $params = [
+                'id' => $pending->userid,
+                'name' => $pending->userid,
+            ];
+            mtrace(get_string('aitaskuserqueued', 'local_assign_ai', $params));
         }
 
         mtrace(get_string('aitaskdone', 'local_assign_ai', $processed));
