@@ -33,11 +33,13 @@ import { get_string as getString } from 'core/str';
 export const init = () => {
     document.querySelectorAll('.view-details').forEach(btn => {
         btn.addEventListener('click', e => {
-            const token = e.currentTarget.dataset.token;
+            const courseid = parseInt(e.currentTarget.dataset.courseid, 10);
+            const cmid = parseInt(e.currentTarget.dataset.cmid, 10);
+            const userid = parseInt(e.currentTarget.dataset.userid, 10);
 
             Ajax.call([{
                 methodname: 'local_assign_ai_get_details',
-                args: { token }
+                args: { courseid, cmid, userid }
             }])[0].done(async data => {
                 // Load localized strings.
                 const [title, saveLabel, saveApproveLabel] = await Promise.all([
@@ -49,7 +51,9 @@ export const init = () => {
                 // Render Mustache template.
                 const bodyHtml = await Templates.render('local_assign_ai/review_modal', {
                     message: data.message || '',
-                    token: token,
+                    courseid,
+                    cmid,
+                    userid,
                     savelabel: saveLabel,
                     saveapprovelabel: saveApproveLabel
                 });
@@ -95,7 +99,7 @@ export const init = () => {
                     const newMessage = getContent();
                     Ajax.call([{
                         methodname: 'local_assign_ai_update_response',
-                        args: { token, message: newMessage },
+                        args: { courseid, cmid, userid, message: newMessage },
                     }])[0].done(() => location.reload())
                         .fail(Notification.exception);
                 });
@@ -106,11 +110,11 @@ export const init = () => {
                     const newMessage = getContent();
                     Ajax.call([{
                         methodname: 'local_assign_ai_update_response',
-                        args: { token, message: newMessage },
+                        args: { courseid, cmid, userid, message: newMessage },
                     }])[0].done(() => {
                         Ajax.call([{
                             methodname: 'local_assign_ai_change_status',
-                            args: { token, action: 'approve' },
+                            args: { courseid, cmid, userid, action: 'approve' },
                         }])[0].done(() => location.reload())
                             .fail(Notification.exception);
                     }).fail(Notification.exception);
@@ -121,7 +125,7 @@ export const init = () => {
                     e.preventDefault();
                     Ajax.call([{
                         methodname: 'local_assign_ai_change_status',
-                        args: { token, action: 'rejected' },
+                        args: { courseid, cmid, userid, action: 'rejected' },
                     }])[0].done(() => location.reload())
                         .fail(Notification.exception);
                 });

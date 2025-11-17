@@ -52,6 +52,7 @@ export const init = async () => {
 
             const cmid = parseInt(button.dataset.cmid);
             const userid = parseInt(button.dataset.userid || 0);
+            const pendingid = button.dataset.pendingid ? parseInt(button.dataset.pendingid, 10) : 0;
             const all = button.dataset.all === '1';
 
             // Save the original HTML to restore it later
@@ -67,7 +68,7 @@ export const init = async () => {
             // AJAX call to the web service
             Ajax.call([{
                 methodname: 'local_assign_ai_process_submission',
-                args: { cmid: cmid, userid: userid, all: all },
+                args: { cmid: cmid, userid: userid, all: all, pendingid: pendingid },
             }])[0].done(result => {
                 if (result.status === 'queued') {
                     Notification.addNotification({
