@@ -171,5 +171,34 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025111306, 'local', 'assign_ai');
     }
 
+    if ($oldversion < 2025111404) {
+
+        // Define field autograde to be added to local_assign_ai_config.
+        $table = new xmldb_table('local_assign_ai_config');
+        $field = new xmldb_field('autograde', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'assignmentid');
+
+        // Conditionally launch add field autograde.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field graderid to be added to local_assign_ai_config.
+        $field = new xmldb_field('graderid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'autograde');
+
+        // Conditionally launch add field graderid.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define key config_grader_fk (foreign) to be added to local_assign_ai_config.
+        $key = new xmldb_key('config_grader_fk', XMLDB_KEY_FOREIGN, ['graderid'], 'user', ['id']);
+
+        // Launch add key config_grader_fk.
+        $dbman->add_key($table, $key);
+
+        // Assign_ai savepoint reached.
+        upgrade_plugin_savepoint(true, 2025111404, 'local', 'assign_ai');
+    }
+
     return true;
 }

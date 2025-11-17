@@ -81,7 +81,7 @@ function local_assign_ai_extend_settings_navigation(settings_navigation $nav, co
  * @return void
  */
 function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
-    global $USER;
+    global $USER, $DB;
 
     if ($formwrapper->get_current()->modulename !== 'assign') {
         return;
@@ -100,6 +100,7 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
     $assignid = $formwrapper->get_current()->instance ?? 0;
     $config = $assignid ? local_assign_ai_get_assignment_config($assignid) : null;
     $default = $config->autograde ?? 0;
+    $graderdefault = $config->graderid ?? null;
 
     $mform->addElement('header', 'local_assign_ai_header', get_string('aiconfigheader', 'local_assign_ai'));
     $mform->addElement(
@@ -110,6 +111,42 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
     );
     $mform->addHelpButton('local_assign_ai_autograde', 'autograde', 'local_assign_ai');
     $mform->setDefault('local_assign_ai_autograde', $default);
+
+    $eligibleusers = get_enrolled_users($context, 'mod/assign:grade');
+    $options = [];
+    foreach ($eligibleusers as $user) {
+        $options[$user->id] = fullname($user);
+    }
+
+    if ($graderdefault && !isset($options[$graderdefault])) {
+        $graderuser = $DB->get_record('user', ['id' => $graderdefault], 'id, firstname, lastname, firstnamephonetic, lastnamephonetic, middlename, alternatename');
+        if ($graderuser) {
+            $options[$graderuser->id] = fullname($graderuser);
+        }
+    }
+
+    if (!empty($options)) {
+        \core_collator::asort($options);
+    }
+
+    $mform->addElement(
+        'autocomplete',
+        'local_assign_ai_grader',
+        get_string('autogradegrader', 'local_assign_ai'),
+        $options,
+        [
+            'multiple' => false,
+            'tags' => false,
+            'maxitems' => 1,
+            'noselectionstring' => get_string('none'),
+        ]
+    );
+    $mform->setType('local_assign_ai_grader', PARAM_INT);
+    $mform->addHelpButton('local_assign_ai_grader', 'autogradegrader', 'local_assign_ai');
+    if ($graderdefault) {
+        $mform->setDefault('local_assign_ai_grader', (int)$graderdefault);
+    }
+    $mform->hideIf('local_assign_ai_grader', 'local_assign_ai_autograde', 'neq', 1);
 }
 
 /**
@@ -127,9 +164,23 @@ function local_assign_ai_coursemodule_edit_post_actions($data, $course) {
     }
 
     $record = $DB->get_record('local_assign_ai_config', ['assignmentid' => $data->instance]);
+    $graderid = $record->graderid ?? null;
+    if (property_exists($data, 'local_assign_ai_grader')) {
+        $value = $data->local_assign_ai_grader;
+        if (is_array($value)) {
+            $value = reset($value);
+        }
+        if (!empty($value)) {
+            $graderid = (int)$value;
+        } else {
+            $graderid = null;
+        }
+    }
+
     $config = (object)[
         'assignmentid' => $data->instance,
         'autograde' => empty($data->local_assign_ai_autograde) ? 0 : 1,
+        'graderid' => $graderid,
         'timemodified' => time(),
         'usermodified' => $USER->id ?? null,
     ];
