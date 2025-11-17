@@ -22,6 +22,8 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use local_assign_ai\assign_submission;
+
 require_once(__DIR__ . '/../../config.php');
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
 
@@ -265,7 +267,7 @@ try {
             'userid' => $student->id,
         ]);
 
-        if ($record && in_array($record->status, ['pending', 'approve'])) {
+        if ($record && in_array($record->status, [assign_submission::STATUS_PENDING, assign_submission::STATUS_APPROVED])) {
             $reviewbtn = html_writer::tag(
                 'button',
                 get_string('review', 'local_assign_ai'),
