@@ -50,7 +50,7 @@ $records = $DB->get_records('local_assign_ai_pending', [
 
 $rows = [];
 if ($records) {
-$userids = array_unique(array_map(fn($record) => $record->userid, $records));
+    $userids = array_unique(array_map(fn($record) => $record->userid, $records));
     $users = user_get_users_by_id($userids);
 
     foreach ($records as $record) {
