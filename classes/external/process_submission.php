@@ -88,10 +88,24 @@ class process_submission extends external_api {
 
         // If processing all submissions → queue background task.
         if ($all) {
+            // Pre-check there is something to process to avoid queuing empty tasks.
+            $pendingcount = $DB->count_records('local_assign_ai_pending', [
+                'courseid' => $course->id,
+                'assignmentid' => $cm->id,
+                'status' => \local_assign_ai\assign_submission::STATUS_INITIAL,
+            ]);
+            if ($pendingcount === 0) {
+                return [
+                    'status' => 'none',
+                    'processed' => 0,
+                ];
+            }
+
             $task = new \local_assign_ai\task\process_all_submissions();
             $task->set_custom_data([
                 'cmid' => $cmid,
                 'courseid' => $course->id,
+                'pendingcount' => $pendingcount,
             ]);
             \core\task\manager::queue_adhoc_task($task);
 
