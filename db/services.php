@@ -57,4 +57,12 @@ $functions = [
         'ajax'        => true,
         'capabilities' => 'local/assign_ai:review',
     ],
+    'local_assign_ai_approve_all_pending' => [
+        'classname'   => 'local_assign_ai\external\approve_all_pending',
+        'methodname'  => 'execute',
+        'description' => 'Approve all pending AI feedback for an assignment.',
+        'type'        => 'write',
+        'ajax'        => true,
+        'capabilities' => 'local/assign_ai:changestatus',
+    ],
 ];
