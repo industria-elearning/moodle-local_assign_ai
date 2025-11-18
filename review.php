@@ -73,6 +73,14 @@ try {
         'status' => assign_submission::STATUS_INITIAL,
     ]);
     $allblocked = ($pendingcount === 0);
+    $hasinitial = ($pendingcount > 0);
+
+    $pendingforapprove = $DB->count_records('local_assign_ai_pending', [
+        'courseid' => $course->id,
+        'assignmentid' => $cm->id,
+        'status' => assign_submission::STATUS_PENDING,
+    ]);
+    $haspending = ($pendingforapprove > 0);
 
     $rows = [];
 
@@ -144,7 +152,20 @@ try {
         $isinitial = ($record->status === assign_submission::STATUS_INITIAL);
         $ispending = ($record->status === assign_submission::STATUS_PENDING);
 
-        // Build row data for template-only rendering.
+        if ($isinitial) {
+            $statebadge = get_string('aistatus_initial_short', 'local_assign_ai');
+            $statehint = get_string('aistatus_initial_help', 'local_assign_ai');
+            $statebadgeclass = 'badge bg-secondary';
+            $canrequestai = true;
+            $canapproveai = false;
+        } else {
+            $statebadge = get_string('aistatus_pending_short', 'local_assign_ai');
+            $statehint = get_string('aistatus_pending_help', 'local_assign_ai');
+            $statebadgeclass = 'badge bg-info';
+            $canrequestai = false;
+            $canapproveai = true;
+        }
+
         $graderurl = new moodle_url('/mod/assign/view.php', [
             'id' => $cmid,
             'action' => 'grader',
@@ -160,6 +181,11 @@ try {
             'grade' => $grade,
             'isinitial' => $isinitial,
             'ispending' => $ispending,
+            'canrequestai' => $canrequestai,
+            'canapproveai' => $canapproveai,
+            'statebadge' => $statebadge,
+            'statehint' => $statehint,
+            'statebadgeclass' => $statebadgeclass,
             'courseid' => $course->id,
             'cmid' => $cmid,
             'userid' => $student->id,
@@ -176,6 +202,8 @@ try {
         'backurl' => (new moodle_url('/course/view.php', ['id' => $course->id]))->out(false),
         'rows' => $rows,
         'allblocked' => $allblocked,
+        'hasinitial' => $hasinitial,
+        'haspending' => $haspending,
         'cmid' => $cmid,
         'courseid' => $course->id,
         'headerlogo' => $logocontext,

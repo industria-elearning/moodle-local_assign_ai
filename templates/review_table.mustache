@@ -45,7 +45,7 @@
     </thead>
     <tbody>
         {{#rows}}
-        <tr>
+        <tr class="{{#ispending}}js-row-pending{{/ispending}}" data-userid="{{userid}}" data-cmid="{{cmid}}" data-courseid="{{courseid}}">
             <td>{{fullname}}</td>
             <td>{{email}}</td>
             <td>{{status}}</td>
@@ -59,25 +59,29 @@
             </td>
             <td>{{grade}}</td>
             <td>
-                {{#isinitial}}{{#str}} aistatus_initial_short, local_assign_ai {{/str}}{{/isinitial}}
-                {{#ispending}}{{#str}} aistatus_pending_short, local_assign_ai {{/str}}{{/ispending}}
+                <span class="{{statebadgeclass}}">{{statebadge}}</span>
+                <div class="text-muted small">{{statehint}}</div>
             </td>
             <td>
                 <div class="local_assign_ai_action-buttons">
                     <a class="btn btn-primary btn-sm text-nowrap" href="{{graderurl}}">{{#str}} qualify, local_assign_ai {{/str}}</a>
-                    <button class="btn btn-success btn-sm text-nowrap view-details"
-                        data-courseid="{{courseid}}"
-                        data-cmid="{{cmid}}"
-                        data-userid="{{userid}}" {{#isinitial}}disabled{{/isinitial}}>
-                        {{#str}} viewdetails, local_assign_ai {{/str}}
-                    </button>
-                    <button class="btn btn-warning btn-sm text-nowrap js-review-ai"
-                        type="button"
-                        data-cmid="{{cmid}}"
-                        data-userid="{{userid}}"
-                        data-pendingid="{{pendingid}}" {{#ispending}}disabled{{/ispending}}>
-                        {{#str}} review, local_assign_ai {{/str}}
-                    </button>
+                    {{#canapproveai}}
+                        <button class="btn btn-success btn-sm text-nowrap view-details"
+                            data-courseid="{{courseid}}"
+                            data-cmid="{{cmid}}"
+                            data-userid="{{userid}}">
+                            {{#str}} viewdetails, local_assign_ai {{/str}}
+                        </button>
+                    {{/canapproveai}}
+                    {{#canrequestai}}
+                        <button class="btn btn-warning btn-sm text-nowrap js-review-ai"
+                            type="button"
+                            data-cmid="{{cmid}}"
+                            data-userid="{{userid}}"
+                            data-pendingid="{{pendingid}}">
+                            {{#str}} review, local_assign_ai {{/str}}
+                        </button>
+                    {{/canrequestai}}
                 </div>
             </td>
         </tr>
