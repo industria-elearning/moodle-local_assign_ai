@@ -36,7 +36,10 @@ export const init = async () => {
         strProcessed,
         strNoSubmissions,
         strReload,
-        strError
+        strError,
+        strConfirmReviewAll,
+        strConfirmTitle,
+        strContinue,
     ] = await Promise.all([
         getString('processing', 'local_assign_ai'),
         getString('queued', 'local_assign_ai'),
@@ -44,6 +47,9 @@ export const init = async () => {
         getString('nosubmissions', 'local_assign_ai'),
         getString('reloadpage', 'local_assign_ai'),
         getString('processingerror', 'local_assign_ai'),
+        getString('confirm_review_all', 'local_assign_ai'),
+        getString('confirm', 'moodle'),
+        getString('continue', 'moodle'),
     ]);
 
     document.querySelectorAll('.js-review-ai').forEach(button => {
@@ -55,55 +61,69 @@ export const init = async () => {
             const pendingid = button.dataset.pendingid ? parseInt(button.dataset.pendingid, 10) : 0;
             const all = button.dataset.all === '1';
 
-            // Save the original HTML to restore it later
-            const originalHTML = button.innerHTML;
+            const processRequest = () => {
+                // Save the original HTML to restore it later
+                const originalHTML = button.innerHTML;
 
-            // Show spinner with text
-            button.innerHTML = `
-                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                ${strProcessing}
-            `;
-            button.disabled = true;
+                // Show spinner with text
+                button.innerHTML = `
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    ${strProcessing}
+                `;
+                button.disabled = true;
 
-            // AJAX call to the web service
-            Ajax.call([{
-                methodname: 'local_assign_ai_process_submission',
-                args: { cmid: cmid, userid: userid, all: all, pendingid: pendingid },
-            }])[0].done(result => {
-                if (result.status === 'queued') {
+                // AJAX call to the web service
+                Ajax.call([{
+                    methodname: 'local_assign_ai_process_submission',
+                    args: { cmid: cmid, userid: userid, all: all, pendingid: pendingid },
+                }])[0].done(result => {
+                    if (result.status === 'queued') {
+                        Notification.addNotification({
+                            message: strQueued,
+                            type: 'info',
+                        });
+                        button.innerHTML = originalHTML;
+                        button.disabled = false;
+                        return;
+                    }
+
+                    if (result.status === 'ok') {
+                        Notification.addNotification({
+                            message: `${strProcessed.replace('{$a}', result.processed)} ${strReload}`,
+                            type: 'success',
+                        });
+                        window.location.reload();
+                        return;
+                    }
+
                     Notification.addNotification({
-                        message: strQueued,
-                        type: 'info',
+                        message: strNoSubmissions,
+                        type: 'warning',
                     });
                     button.innerHTML = originalHTML;
                     button.disabled = false;
-                    return;
-                }
-
-                if (result.status === 'ok') {
+                }).fail(err => {
                     Notification.addNotification({
-                        message: `${strProcessed.replace('{$a}', result.processed)} ${strReload}`,
-                        type: 'success',
+                        message: strError,
+                        type: 'error',
                     });
-                    window.location.reload();
-                    return;
-                }
+                    Notification.exception(err);
+                    button.innerHTML = originalHTML;
+                    button.disabled = false;
+                });
+            };
 
-                Notification.addNotification({
-                    message: strNoSubmissions,
-                    type: 'warning',
-                });
-                button.innerHTML = originalHTML;
-                button.disabled = false;
-            }).fail(err => {
-                Notification.addNotification({
-                    message: strError,
-                    type: 'error',
-                });
-                Notification.exception(err);
-                button.innerHTML = originalHTML;
-                button.disabled = false;
-            });
+            if (all) {
+                Notification.saveCancelPromise(
+                    strConfirmTitle,
+                    strConfirmReviewAll,
+                    strContinue,
+                    {triggerElement: button}
+                ).then(processRequest).catch(() => {});
+                return;
+            }
+
+            processRequest();
         });
     });
 };
