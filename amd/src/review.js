@@ -138,4 +138,44 @@ export const init = () => {
             }).fail(Notification.exception);
         });
     });
+
+    // Approve all pending items.
+    const approveAllBtn = document.querySelector('.js-approve-all');
+    if (approveAllBtn) {
+        approveAllBtn.addEventListener('click', async e => {
+            e.preventDefault();
+            const [confirmApproveAll, confirmTitle, continueLabel] = await Promise.all([
+                getString('confirm_approve_all', 'local_assign_ai'),
+                getString('confirm', 'moodle'),
+                getString('continue', 'moodle'),
+            ]);
+
+            const doApproveAll = () => {
+                approveAllBtn.disabled = true;
+                const originalHTML = approveAllBtn.innerHTML;
+                const spinnerHtml = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>';
+                approveAllBtn.innerHTML = spinnerHtml + originalHTML;
+
+                const courseid = parseInt(approveAllBtn.dataset.courseid, 10);
+                const cmid = parseInt(approveAllBtn.dataset.cmid, 10);
+                Ajax.call([{
+                    methodname: 'local_assign_ai_approve_all_pending',
+                    args: { courseid, cmid },
+                }])[0]
+                    .done(() => window.location.reload())
+                    .fail(err => {
+                        Notification.exception(err);
+                        approveAllBtn.innerHTML = originalHTML;
+                        approveAllBtn.disabled = false;
+                    });
+            };
+
+            Notification.saveCancelPromise(
+                confirmTitle,
+                confirmApproveAll,
+                continueLabel,
+                {triggerElement: approveAllBtn}
+            ).then(doApproveAll).catch(() => {});
+        });
+    }
 };
