@@ -45,7 +45,7 @@
     </thead>
     <tbody>
         {{#rows}}
-        <tr class="{{#ispending}}js-row-pending{{/ispending}}" data-userid="{{userid}}" data-cmid="{{cmid}}" data-courseid="{{courseid}}">
+        <tr class="{{#ispending}}js-row-pending{{/ispending}} {{#inprogress}}js-row-inprogress{{/inprogress}}" data-userid="{{userid}}" data-cmid="{{cmid}}" data-courseid="{{courseid}}" data-pendingid="{{pendingid}}" data-progress="{{progress}}">
             <td>{{fullname}}</td>
             <td>{{email}}</td>
             <td>{{status}}</td>
@@ -59,8 +59,14 @@
             </td>
             <td>{{grade}}</td>
             <td>
-                <span class="{{statebadgeclass}}">{{statebadge}}</span>
-                <div class="text-muted small">{{statehint}}</div>
+                <span class="{{statebadgeclass}} js-state-badge">{{statebadge}}</span>
+                <div class="text-muted small js-state-hint">{{statehint}}</div>
+                {{#inprogress}}
+                    <div class="small text-warning js-progress-indicator">
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                        {{#str}} processing, local_assign_ai {{/str}} ({{progress}}%)
+                    </div>
+                {{/inprogress}}
             </td>
             <td>
                 <div class="local_assign_ai_action-buttons">
@@ -69,7 +75,7 @@
                         <button class="btn btn-success btn-sm text-nowrap view-details"
                             data-courseid="{{courseid}}"
                             data-cmid="{{cmid}}"
-                            data-userid="{{userid}}">
+                            data-userid="{{userid}}" {{#inprogress}}disabled{{/inprogress}}>
                             {{#str}} viewdetails, local_assign_ai {{/str}}
                         </button>
                     {{/canapproveai}}
@@ -78,7 +84,7 @@
                             type="button"
                             data-cmid="{{cmid}}"
                             data-userid="{{userid}}"
-                            data-pendingid="{{pendingid}}">
+                            data-pendingid="{{pendingid}}" {{#inprogress}}disabled{{/inprogress}}>
                             {{#str}} review, local_assign_ai {{/str}}
                         </button>
                     {{/canrequestai}}

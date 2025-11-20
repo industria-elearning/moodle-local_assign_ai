@@ -83,7 +83,14 @@ export const init = async () => {
                             type: 'info',
                         });
                         button.innerHTML = originalHTML;
-                        button.disabled = false;
+                        // Keep the bulk button disabled while progress polling runs.
+                        if (all) {
+                            button.disabled = true;
+                            // Soft trigger: add a body class so the progress module (if present) may start earlier.
+                            document.body.classList.add('assign-ai-progress-running');
+                        } else {
+                            button.disabled = false;
+                        }
                         return;
                     }
 

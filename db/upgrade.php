@@ -200,5 +200,22 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025111404, 'local', 'assign_ai');
     }
 
+    if ($oldversion < 2025112404) {
+        // Define field progress to be added to local_assign_ai_pending.
+        $table = new xmldb_table('local_assign_ai_pending');
+        $field = new xmldb_field('progress', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'status');
+
+        // Conditionally launch add field progress.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Ensure all existing records have progress set.
+        $DB->execute("UPDATE {local_assign_ai_pending} SET progress = 0 WHERE progress IS NULL");
+
+        // Savepoint.
+        upgrade_plugin_savepoint(true, 2025112404, 'local', 'assign_ai');
+    }
+
     return true;
 }

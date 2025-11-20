@@ -76,9 +76,17 @@ class process_all_submissions extends adhoc_task {
             'status' => \local_assign_ai\assign_submission::STATUS_INITIAL,
         ]);
 
+        $total = count($pendings) ?: 1;
+
         foreach ($pendings as $pending) {
+            // Update progress approximate percentage for this record.
+            $percent = (int)max(1, floor(($processed / $total) * 100));
+            \local_assign_ai\assign_submission::update_pending_submission($pending->id, ['progress' => $percent]);
             $proc = new \local_assign_ai\assign_submission($pending->userid, $assign);
             $proc->process_submission_ai_review($pending->id);
+
+            // Mark this record as completed in terms of progress.
+            \local_assign_ai\assign_submission::update_pending_submission($pending->id, ['progress' => 100]);
 
             $processed++;
             $params = [

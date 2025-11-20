@@ -65,4 +65,12 @@ $functions = [
         'ajax'        => true,
         'capabilities' => 'local/assign_ai:changestatus',
     ],
+    'local_assign_ai_get_progress' => [
+        'classname'   => 'local_assign_ai\external\get_progress',
+        'methodname'  => 'execute',
+        'description' => 'Get progress info for pending AI reviews.',
+        'type'        => 'read',
+        'ajax'        => true,
+        'capabilities' => 'local/assign_ai:review',
+    ],
 ];

@@ -58,6 +58,7 @@ try {
     $PAGE->set_heading(format_string($course->fullname));
     $PAGE->requires->js_call_amd('local_assign_ai/review', 'init');
     $PAGE->requires->js_call_amd('local_assign_ai/review_with_ai', 'init');
+    $PAGE->requires->js_call_amd('local_assign_ai/review_progress', 'init', [$cmid]);
     $PAGE->requires->css('/local/assign_ai/styles/review.css');
 
     $PAGE->activityheader->disable();
@@ -149,6 +150,8 @@ try {
         }
 
         $grade = $record->grade !== null ? $record->grade : '-';
+        $progress = isset($record->progress) ? (int)$record->progress : 0;
+        $inprogress = ($progress > 0 && $progress < 100);
         $isinitial = ($record->status === assign_submission::STATUS_INITIAL);
         $ispending = ($record->status === assign_submission::STATUS_PENDING);
 
@@ -181,6 +184,8 @@ try {
             'grade' => $grade,
             'isinitial' => $isinitial,
             'ispending' => $ispending,
+            'inprogress' => $inprogress,
+            'progress' => $progress,
             'canrequestai' => $canrequestai,
             'canapproveai' => $canapproveai,
             'statebadge' => $statebadge,
