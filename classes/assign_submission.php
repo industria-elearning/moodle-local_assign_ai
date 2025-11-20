@@ -31,6 +31,10 @@ class assign_submission {
     public const STATUS_INITIAL = 'initial';
     /** Pending status awaiting human review. */
     public const STATUS_PENDING = 'pending';
+    /** Queued status when review-all has been scheduled. */
+    public const STATUS_QUEUED = 'queued';
+    /** Processing status when ad-hoc task is handling the record. */
+    public const STATUS_PROCESSING = 'processing';
     /** Approved status after human review or AI grading. */
     public const STATUS_APPROVED = 'approved';
     /** Rejected status after human review. */

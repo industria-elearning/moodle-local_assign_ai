@@ -101,19 +101,12 @@ class process_submission extends external_api {
                 ];
             }
 
-            // Mark all selected pendings with minimal progress to reflect queued state.
-            $DB->execute(
-                "UPDATE {local_assign_ai_pending}
-                    SET progress = 1
-                  WHERE courseid = :courseid
-                    AND assignmentid = :cmid
-                    AND status = :status",
-                [
-                    'courseid' => $course->id,
-                    'cmid' => $cm->id,
-                    'status' => \local_assign_ai\assign_submission::STATUS_INITIAL,
-                ]
-            );
+            // Move INITIAL records to QUEUED state so UI shows 'en cola'.
+            $DB->set_field('local_assign_ai_pending', 'status', \local_assign_ai\assign_submission::STATUS_QUEUED, [
+                'courseid' => $course->id,
+                'assignmentid' => $cm->id,
+                'status' => \local_assign_ai\assign_submission::STATUS_INITIAL,
+            ]);
 
             $task = new \local_assign_ai\task\process_all_submissions();
             $task->set_custom_data([
@@ -134,14 +127,11 @@ class process_submission extends external_api {
             $student = $DB->get_record('user', ['id' => $userid], '*', MUST_EXIST);
             $proc = new \local_assign_ai\assign_submission($student->id, $assign);
             if ($pendingid) {
-                // Mark progress as started.
-                \local_assign_ai\assign_submission::update_pending_submission($pendingid, ['progress' => 10]);
+                \local_assign_ai\assign_submission::update_pending_submission($pendingid, [
+                    'status' => \local_assign_ai\assign_submission::STATUS_PROCESSING,
+                ]);
             }
             $proc->process_submission_ai_review($pendingid);
-            if ($pendingid) {
-                // Mark progress as completed for this record.
-                \local_assign_ai\assign_submission::update_pending_submission($pendingid, ['progress' => 100]);
-            }
             $processed++;
         }
 

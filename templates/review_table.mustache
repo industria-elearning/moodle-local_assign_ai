@@ -45,7 +45,7 @@
     </thead>
     <tbody>
         {{#rows}}
-        <tr class="{{#ispending}}js-row-pending{{/ispending}} {{#inprogress}}js-row-inprogress{{/inprogress}}" data-userid="{{userid}}" data-cmid="{{cmid}}" data-courseid="{{courseid}}" data-pendingid="{{pendingid}}" data-progress="{{progress}}">
+        <tr class="{{#ispending}}js-row-pending{{/ispending}} {{#inprogress}}js-row-inprogress{{/inprogress}}" data-userid="{{userid}}" data-cmid="{{cmid}}" data-courseid="{{courseid}}" data-pendingid="{{pendingid}}">
             <td>{{fullname}}</td>
             <td>{{email}}</td>
             <td>{{status}}</td>
@@ -64,30 +64,25 @@
                 {{#inprogress}}
                     <div class="small text-warning js-progress-indicator">
                         <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
-                        {{#str}} processing, local_assign_ai {{/str}} ({{progress}}%)
                     </div>
                 {{/inprogress}}
             </td>
             <td>
                 <div class="local_assign_ai_action-buttons">
                     <a class="btn btn-primary btn-sm text-nowrap" href="{{graderurl}}">{{#str}} qualify, local_assign_ai {{/str}}</a>
-                    {{#canapproveai}}
-                        <button class="btn btn-success btn-sm text-nowrap view-details"
-                            data-courseid="{{courseid}}"
-                            data-cmid="{{cmid}}"
-                            data-userid="{{userid}}" {{#inprogress}}disabled{{/inprogress}}>
-                            {{#str}} viewdetails, local_assign_ai {{/str}}
-                        </button>
-                    {{/canapproveai}}
-                    {{#canrequestai}}
-                        <button class="btn btn-warning btn-sm text-nowrap js-review-ai"
-                            type="button"
-                            data-cmid="{{cmid}}"
-                            data-userid="{{userid}}"
-                            data-pendingid="{{pendingid}}" {{#inprogress}}disabled{{/inprogress}}>
-                            {{#str}} review, local_assign_ai {{/str}}
-                        </button>
-                    {{/canrequestai}}
+                    <button class="btn btn-success btn-sm text-nowrap view-details js-btn-details {{^canapproveai}}d-none{{/canapproveai}}"
+                        data-courseid="{{courseid}}"
+                        data-cmid="{{cmid}}"
+                        data-userid="{{userid}}" {{#inprogress}}disabled{{/inprogress}}>
+                        {{#str}} viewdetails, local_assign_ai {{/str}}
+                    </button>
+                    <button class="btn btn-warning btn-sm text-nowrap js-review-ai js-btn-review {{^canrequestai}}d-none{{/canrequestai}}"
+                        type="button"
+                        data-cmid="{{cmid}}"
+                        data-userid="{{userid}}"
+                        data-pendingid="{{pendingid}}" {{#inprogress}}disabled{{/inprogress}}>
+                        {{#str}} review, local_assign_ai {{/str}}
+                    </button>
                 </div>
             </td>
         </tr>

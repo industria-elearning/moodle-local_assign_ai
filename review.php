@@ -85,8 +85,13 @@ try {
 
     $rows = [];
 
-    // Build table from pending records with status initial or pending.
-    $statuses = [assign_submission::STATUS_INITIAL, assign_submission::STATUS_PENDING];
+    // Build table from records with statuses relevant to the workflow.
+    $statuses = [
+        assign_submission::STATUS_INITIAL,
+        assign_submission::STATUS_QUEUED,
+        assign_submission::STATUS_PROCESSING,
+        assign_submission::STATUS_PENDING,
+    ];
     list($insql, $inparams) = $DB->get_in_or_equal($statuses, SQL_PARAMS_NAMED, 'st');
     $select = "courseid = :courseid AND assignmentid = :assignmentid AND status $insql";
     $inparams['courseid'] = $course->id;
@@ -150,9 +155,10 @@ try {
         }
 
         $grade = $record->grade !== null ? $record->grade : '-';
-        $progress = isset($record->progress) ? (int)$record->progress : 0;
-        $inprogress = ($progress > 0 && $progress < 100);
+        $inprogress = $record->status === assign_submission::STATUS_PROCESSING;
         $isinitial = ($record->status === assign_submission::STATUS_INITIAL);
+        $isqueued = ($record->status === assign_submission::STATUS_QUEUED);
+        $isprocessing = ($record->status === assign_submission::STATUS_PROCESSING);
         $ispending = ($record->status === assign_submission::STATUS_PENDING);
 
         if ($isinitial) {
@@ -160,6 +166,20 @@ try {
             $statehint = get_string('aistatus_initial_help', 'local_assign_ai');
             $statebadgeclass = 'badge bg-secondary';
             $canrequestai = true;
+            $canapproveai = false;
+        } else if ($isqueued) {
+            // Short badge label + longer hint below.
+            $statebadge = get_string('queued', 'local_assign_ai');
+            $statehint = get_string('aistatus_queued_help', 'local_assign_ai');
+            $statebadgeclass = 'badge bg-warning text-dark';
+            $canrequestai = false;
+            $canapproveai = false;
+        } else if ($isprocessing) {
+            // Short badge label + longer hint below.
+            $statebadge = get_string('processing', 'local_assign_ai');
+            $statehint = get_string('aistatus_processing_help', 'local_assign_ai');
+            $statebadgeclass = 'badge bg-warning text-dark';
+            $canrequestai = false;
             $canapproveai = false;
         } else {
             $statebadge = get_string('aistatus_pending_short', 'local_assign_ai');
@@ -185,7 +205,6 @@ try {
             'isinitial' => $isinitial,
             'ispending' => $ispending,
             'inprogress' => $inprogress,
-            'progress' => $progress,
             'canrequestai' => $canrequestai,
             'canapproveai' => $canapproveai,
             'statebadge' => $statebadge,

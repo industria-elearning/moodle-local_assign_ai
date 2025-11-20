@@ -69,24 +69,20 @@ class process_all_submissions extends adhoc_task {
 
         $processed = 0;
 
-        // Obtain pending records to review (status = initial) for this assignment.
+        // Obtain records enqueued to review (status = queued) for this assignment.
         $pendings = $DB->get_records('local_assign_ai_pending', [
             'courseid' => $course->id,
             'assignmentid' => $cm->id,
-            'status' => \local_assign_ai\assign_submission::STATUS_INITIAL,
+            'status' => \local_assign_ai\assign_submission::STATUS_QUEUED,
         ]);
 
-        $total = count($pendings) ?: 1;
-
         foreach ($pendings as $pending) {
-            // Update progress approximate percentage for this record.
-            $percent = (int)max(1, floor(($processed / $total) * 100));
-            \local_assign_ai\assign_submission::update_pending_submission($pending->id, ['progress' => $percent]);
+            // Move to processing state.
+            \local_assign_ai\assign_submission::update_pending_submission($pending->id, [
+                'status' => \local_assign_ai\assign_submission::STATUS_PROCESSING,
+            ]);
             $proc = new \local_assign_ai\assign_submission($pending->userid, $assign);
             $proc->process_submission_ai_review($pending->id);
-
-            // Mark this record as completed in terms of progress.
-            \local_assign_ai\assign_submission::update_pending_submission($pending->id, ['progress' => 100]);
 
             $processed++;
             $params = [

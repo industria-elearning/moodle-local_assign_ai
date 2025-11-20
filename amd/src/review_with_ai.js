@@ -88,6 +88,36 @@ export const init = async () => {
                             button.disabled = true;
                             // Soft trigger: add a body class so the progress module (if present) may start earlier.
                             document.body.classList.add('assign-ai-progress-running');
+
+                            // Immediately reflect UI as queued for all rows in this CM.
+                            const rows = document.querySelectorAll('tr[data-cmid="' + cmid + '"]');
+                            rows.forEach(row => {
+                                // Badge short label.
+                                const badge = row.querySelector('.js-state-badge');
+                                if (badge) {
+                                    badge.className = 'badge bg-warning text-dark js-state-badge';
+                                    badge.textContent = strQueued; // Short text.
+                                }
+                                // Longer hint under badge.
+                                const hint = row.querySelector('.js-state-hint');
+                                if (hint) {
+                                    getString('aistatus_queued_help', 'local_assign_ai').then(txt => {
+                                        hint.textContent = txt;
+                                    }).catch(() => {});
+                                }
+                                // Disable all row actions while queued.
+                                row.querySelectorAll('button').forEach(b => b.setAttribute('disabled', 'disabled'));
+                                // Ensure review/details visibility is consistent: hide details while not pending.
+                                const btnDetails = row.querySelector('.js-btn-details');
+                                if (btnDetails) {
+                                    btnDetails.classList.add('d-none');
+                                }
+                            });
+
+                            // Optionally trigger an immediate poll tick if the progress module is loaded.
+                            try {
+                                window.dispatchEvent(new CustomEvent('local_assign_ai:progress:start', {detail: {cmid}}));
+                            } catch (e) {}
                         } else {
                             button.disabled = false;
                         }
