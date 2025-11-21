@@ -24,6 +24,7 @@
 import Ajax from 'core/ajax';
 import Notification from 'core/notification';
 import { get_string as getString } from 'core/str';
+import { ensurePolling } from 'local_assign_ai/review_progress';
 
 /**
  * Initialize event listeners for AI review buttons.
@@ -32,7 +33,7 @@ export const init = async () => {
     // Load localized strings
     const [
         strProcessing,
-        strQueued,
+        strQueuedShort,
         strProcessed,
         strNoSubmissions,
         strReload,
@@ -42,7 +43,7 @@ export const init = async () => {
         strContinue,
     ] = await Promise.all([
         getString('processing', 'local_assign_ai'),
-        getString('queued', 'local_assign_ai'),
+        getString('aistatus_queued_short', 'local_assign_ai'),
         getString('processed', 'local_assign_ai'),
         getString('nosubmissions', 'local_assign_ai'),
         getString('reloadpage', 'local_assign_ai'),
@@ -79,7 +80,7 @@ export const init = async () => {
                 }])[0].done(result => {
                     if (result.status === 'queued') {
                         Notification.addNotification({
-                            message: strQueued,
+                            message: strQueuedShort,
                             type: 'info',
                         });
                         button.innerHTML = originalHTML;
@@ -92,11 +93,13 @@ export const init = async () => {
                             // Immediately reflect UI as queued for all rows in this CM.
                             const rows = document.querySelectorAll('tr[data-cmid="' + cmid + '"]');
                             rows.forEach(row => {
+                                row.setAttribute('data-status', 'queued');
+                                row.classList.add('js-row-queued');
                                 // Badge short label.
                                 const badge = row.querySelector('.js-state-badge');
                                 if (badge) {
                                     badge.className = 'badge bg-warning text-dark js-state-badge';
-                                    badge.textContent = strQueued; // Short text.
+                                    badge.textContent = strQueuedShort; // Short text.
                                 }
                                 // Longer hint under badge.
                                 const hint = row.querySelector('.js-state-hint');
@@ -114,10 +117,7 @@ export const init = async () => {
                                 }
                             });
 
-                            // Optionally trigger an immediate poll tick if the progress module is loaded.
-                            try {
-                                window.dispatchEvent(new CustomEvent('local_assign_ai:progress:start', {detail: {cmid}}));
-                            } catch (e) {}
+                            ensurePolling();
                         } else {
                             button.disabled = false;
                         }

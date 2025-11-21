@@ -45,7 +45,7 @@
     </thead>
     <tbody>
         {{#rows}}
-        <tr class="{{#ispending}}js-row-pending{{/ispending}} {{#inprogress}}js-row-inprogress{{/inprogress}}" data-userid="{{userid}}" data-cmid="{{cmid}}" data-courseid="{{courseid}}" data-pendingid="{{pendingid}}">
+        <tr class="{{#ispending}}js-row-pending{{/ispending}} {{#inprogress}}js-row-inprogress{{/inprogress}} {{#isqueued}}js-row-queued{{/isqueued}}" data-userid="{{userid}}" data-cmid="{{cmid}}" data-courseid="{{courseid}}" data-pendingid="{{pendingid}}" data-status="{{aistatus}}">
             <td>{{fullname}}</td>
             <td>{{email}}</td>
             <td>{{status}}</td>
@@ -54,7 +54,7 @@
                 {{#files}}
                     <a href="{{url}}">{{name}}</a>
                 {{/files}}
-                {{^files}}-
+                {{^files}}
                 {{/files}}
             </td>
             <td>{{grade}}</td>
@@ -69,18 +69,23 @@
             </td>
             <td>
                 <div class="local_assign_ai_action-buttons">
-                    <a class="btn btn-primary btn-sm text-nowrap" href="{{graderurl}}">{{#str}} qualify, local_assign_ai {{/str}}</a>
+                    <a class="btn btn-primary btn-sm text-nowrap js-btn-grade {{#inprogress}}disabled{{/inprogress}} {{#isqueued}}disabled{{/isqueued}}"
+                       href="{{graderurl}}"
+                       {{#inprogress}}aria-disabled="true" tabindex="-1"{{/inprogress}}
+                       {{#isqueued}}aria-disabled="true" tabindex="-1"{{/isqueued}}>
+                        {{#str}} qualify, local_assign_ai {{/str}}
+                    </a>
                     <button class="btn btn-success btn-sm text-nowrap view-details js-btn-details {{^canapproveai}}d-none{{/canapproveai}}"
                         data-courseid="{{courseid}}"
                         data-cmid="{{cmid}}"
                         data-userid="{{userid}}" {{#inprogress}}disabled{{/inprogress}}>
                         {{#str}} viewdetails, local_assign_ai {{/str}}
                     </button>
-                    <button class="btn btn-warning btn-sm text-nowrap js-review-ai js-btn-review {{^canrequestai}}d-none{{/canrequestai}}"
+                    <button class="btn btn-warning btn-sm text-nowrap js-review-ai js-btn-review {{#canapproveai}}d-none{{/canapproveai}}"
                         type="button"
                         data-cmid="{{cmid}}"
                         data-userid="{{userid}}"
-                        data-pendingid="{{pendingid}}" {{#inprogress}}disabled{{/inprogress}}>
+                        data-pendingid="{{pendingid}}" {{#inprogress}}disabled{{/inprogress}} {{#isqueued}}disabled{{/isqueued}}>
                         {{#str}} review, local_assign_ai {{/str}}
                     </button>
                 </div>

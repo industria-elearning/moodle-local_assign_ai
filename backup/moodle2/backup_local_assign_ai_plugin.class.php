@@ -33,9 +33,11 @@ class backup_local_assign_ai_plugin extends backup_local_plugin {
         $pluginwrapper = new backup_nested_element($this->get_recommended_name());
         $plugin->add_child($pluginwrapper);
 
-        // Container for all pending and approved AI feedback.
+        // Container for pending/approved AI feedback and assignment configs.
         $pendings = new backup_nested_element('assign_ai_pendings');
+        $configs = new backup_nested_element('assign_ai_configs');
         $pluginwrapper->add_child($pendings);
+        $pluginwrapper->add_child($configs);
 
         // Each record (pending or approved).
         $pending = new backup_nested_element('assign_ai_pending', ['id'], [
@@ -48,9 +50,9 @@ class backup_local_assign_ai_plugin extends backup_local_plugin {
             'rubric_response',
             'status',
             'approval_token',
+            'usermodified',
             'timecreated',
             'timemodified',
-            'approved_at',
         ]);
         $pendings->add_child($pending);
 
@@ -64,7 +66,31 @@ class backup_local_assign_ai_plugin extends backup_local_plugin {
         // Map dependent entities.
         $pending->annotate_ids('assign', 'assignmentid');
         $pending->annotate_ids('user', 'userid');
+        $pending->annotate_ids('user', 'usermodified');
         $pending->annotate_ids('course', 'courseid');
+
+        // Container with assignment-level configuration for local_assign_ai.
+        $config = new backup_nested_element('assign_ai_config', ['id'], [
+            'assignmentid',
+            'autograde',
+            'graderid',
+            'usermodified',
+            'timecreated',
+            'timemodified',
+        ]);
+        $configs->add_child($config);
+
+        // Capture configurations only for assignments that belong to this course.
+        $config->set_source_sql('
+            SELECT c.*
+              FROM {local_assign_ai_config} c
+              JOIN {assign} a ON a.id = c.assignmentid
+             WHERE a.course = ?
+        ', [backup::VAR_COURSEID]);
+
+        $config->annotate_ids('assign', 'assignmentid');
+        $config->annotate_ids('user', 'graderid');
+        $config->annotate_ids('user', 'usermodified');
 
         return $plugin;
     }

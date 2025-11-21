@@ -36,19 +36,42 @@ const startOffsets = new Map(); // pendingid -> int percent (1..8)
 const curveFactors = new Map(); // pendingid -> float (0.6..1.4)
 const lastShown = new Map(); // pendingid -> last integer percent shown
 
+function setLinkDisabled(link, disabled) {
+    if (!link) {
+        return;
+    }
+    if (disabled) {
+        link.classList.add('disabled');
+        link.setAttribute('aria-disabled', 'true');
+        link.setAttribute('tabindex', '-1');
+    } else {
+        link.classList.remove('disabled');
+        link.removeAttribute('aria-disabled');
+        link.removeAttribute('tabindex');
+    }
+}
+
+/**
+ * Check if there are rows that should be polled.
+ * @returns {boolean}
+ */
+function hasActiveRows() {
+    return !!document.querySelector('tr[data-status="processing"], tr[data-status="queued"], tr.js-row-inprogress, tr.js-row-queued');
+}
+
 /**
  * Disable/enable the header buttons depending on current progress state.
  */
 function reflectHeaderButtonsState() {
-    const anyInProgress = document.querySelector('tr.js-row-inprogress');
+    const anyActive = hasActiveRows();
     const btnReviewAll = document.querySelector('.js-review-all');
     const btnApproveAll = document.querySelector('.js-approve-all');
 
     if (btnReviewAll) {
-        btnReviewAll.disabled = !!anyInProgress || btnReviewAll.disabled;
+        btnReviewAll.disabled = anyActive || btnReviewAll.disabled;
     }
     if (btnApproveAll) {
-        if (anyInProgress) {
+        if (anyActive) {
             btnApproveAll.setAttribute('disabled', 'disabled');
         } else if (btnApproveAll.dataset.enableonidle === '1') {
             btnApproveAll.removeAttribute('disabled');
@@ -68,6 +91,7 @@ function updateRow(row, progress, status) {
     let indicator = row.querySelector('.js-progress-indicator');
     const btnReview = row.querySelector('.js-btn-review');
     const btnDetails = row.querySelector('.js-btn-details');
+    const btnGrade = row.querySelector('.js-btn-grade');
 
     if (status === 'processing' && progress > 0 && progress < 100) {
         row.classList.add('js-row-inprogress');
@@ -83,6 +107,7 @@ function updateRow(row, progress, status) {
 
         // Disable row action buttons while in progress.
         row.querySelectorAll('button').forEach(b => b.setAttribute('disabled', 'disabled'));
+        setLinkDisabled(btnGrade, true);
     } else {
         row.classList.remove('js-row-inprogress');
         if (indicator) {
@@ -91,13 +116,17 @@ function updateRow(row, progress, status) {
         // Re-enable row buttons depending on status.
         if (status === 'initial') {
             row.querySelectorAll('.js-review-ai').forEach(b => b.removeAttribute('disabled'));
+            setLinkDisabled(btnGrade, false);
         } else if (status === 'pending') {
             row.querySelectorAll('.view-details').forEach(b => b.removeAttribute('disabled'));
+            setLinkDisabled(btnGrade, false);
         } else if (status === 'queued') {
             // Keep disabled while waiting for processing to start.
             row.querySelectorAll('button').forEach(b => b.setAttribute('disabled', 'disabled'));
+            setLinkDisabled(btnGrade, true);
         } else {
             row.querySelectorAll('button').forEach(b => b.removeAttribute('disabled'));
+            setLinkDisabled(btnGrade, false);
         }
     }
 
@@ -108,11 +137,11 @@ function updateRow(row, progress, status) {
             getString('aistatus_initial_short', 'local_assign_ai').then(t => { badge.textContent = t; }).catch(() => {});
             getString('aistatus_initial_help', 'local_assign_ai').then(t => { hint.textContent = t; }).catch(() => {});
         } else if (status === 'queued') {
-            badge.className = 'badge bg-warning text-dark js-state-badge';
-            getString('queued', 'local_assign_ai').then(t => { badge.textContent = t; }).catch(() => {});
+            badge.className = 'badge bg-warning js-state-badge';
+            getString('aistatus_queued_short', 'local_assign_ai').then(t => { badge.textContent = t; }).catch(() => {});
             getString('aistatus_queued_help', 'local_assign_ai').then(t => { hint.textContent = t; }).catch(() => {});
         } else if (status === 'processing') {
-            badge.className = 'badge bg-warning text-dark js-state-badge';
+            badge.className = 'badge bg-warning js-state-badge';
             getString('processing', 'local_assign_ai').then(t => { badge.textContent = t; }).catch(() => {});
             getString('aistatus_processing_help', 'local_assign_ai').then(t => { hint.textContent = t; }).catch(() => {});
         } else if (status === 'pending') {
@@ -143,8 +172,15 @@ function collectPendingIds() {
     const ids = [];
     rows.forEach(row => {
         const pid = parseInt(row.getAttribute('data-pendingid'), 10);
-        const progress = parseInt(row.getAttribute('data-progress') || '0', 10);
-        if (pid && progress < 100) {
+        if (!pid) {
+            return;
+        }
+        const status = (row.getAttribute('data-status') || '').toLowerCase();
+        const isProcessing = status === 'processing';
+        const isQueued = status === 'queued';
+        const fallbackProcessing = !status && row.classList.contains('js-row-inprogress');
+        const fallbackQueued = !status && row.classList.contains('js-row-queued');
+        if (isProcessing || isQueued || fallbackProcessing || fallbackQueued) {
             ids.push(pid);
         }
     });
@@ -208,6 +244,12 @@ function applyProgress(entries) {
             lastShown.delete(entry.id);
         }
 
+        row.setAttribute('data-status', entry.status);
+        if (entry.status === 'queued') {
+            row.classList.add('js-row-queued');
+        } else {
+            row.classList.remove('js-row-queued');
+        }
         row.setAttribute('data-progress', String(adjusted));
         updateRow(row, adjusted, entry.status);
     });
@@ -215,15 +257,23 @@ function applyProgress(entries) {
     reflectHeaderButtonsState();
 }
 
+function stopPolling() {
+    if (intervalid) {
+        clearInterval(intervalid);
+        intervalid = 0;
+    }
+}
+
 /**
  * Poll backend for progress.
+ * @returns {boolean}
  */
 function poll() {
     const ids = collectPendingIds();
     if (ids.length === 0) {
-        clearInterval(intervalid);
+        stopPolling();
         reflectHeaderButtonsState();
-        return;
+        return false;
     }
 
     Ajax.call([{
@@ -234,6 +284,18 @@ function poll() {
     }).fail(err => {
         Notification.exception(err);
     });
+
+    return true;
+}
+
+function startPolling() {
+    if (intervalid) {
+        return;
+    }
+    if (!poll()) {
+        return;
+    }
+    intervalid = setInterval(poll, POLL_MS_DEFAULT);
 }
 
 /**
@@ -243,10 +305,26 @@ function poll() {
 export function init(cmid) {
     // Initial reflect and start polling.
     reflectHeaderButtonsState();
-    // If page was just queued, ensure we start immediately.
     const initialDelay = document.body.classList.contains('assign-ai-progress-running') ? 0 : POLL_MS_DEFAULT;
-    setTimeout(() => {
-        poll();
-        intervalid = setInterval(poll, POLL_MS_DEFAULT);
-    }, initialDelay);
+
+    document.addEventListener('click', (e) => {
+        const target = e.target.closest('a.js-btn-grade');
+        if (target && (target.classList.contains('disabled') || target.getAttribute('aria-disabled') === 'true')) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true);
+
+    if (hasActiveRows()) {
+        setTimeout(() => {
+            startPolling();
+        }, initialDelay);
+    }
+}
+
+/**
+ * Public helper so other modules (e.g. review_with_ai) can force the poller to start.
+ */
+export function ensurePolling() {
+    startPolling();
 }

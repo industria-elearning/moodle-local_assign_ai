@@ -169,16 +169,16 @@ try {
             $canapproveai = false;
         } else if ($isqueued) {
             // Short badge label + longer hint below.
-            $statebadge = get_string('queued', 'local_assign_ai');
+            $statebadge = get_string('aistatus_queued_short', 'local_assign_ai');
             $statehint = get_string('aistatus_queued_help', 'local_assign_ai');
-            $statebadgeclass = 'badge bg-warning text-dark';
+            $statebadgeclass = 'badge bg-warning';
             $canrequestai = false;
             $canapproveai = false;
         } else if ($isprocessing) {
             // Short badge label + longer hint below.
             $statebadge = get_string('processing', 'local_assign_ai');
             $statehint = get_string('aistatus_processing_help', 'local_assign_ai');
-            $statebadgeclass = 'badge bg-warning text-dark';
+            $statebadgeclass = 'badge bg-warning';
             $canrequestai = false;
             $canapproveai = false;
         } else {
@@ -204,7 +204,9 @@ try {
             'grade' => $grade,
             'isinitial' => $isinitial,
             'ispending' => $ispending,
+            'isqueued' => $isqueued,
             'inprogress' => $inprogress,
+            'aistatus' => $record->status,
             'canrequestai' => $canrequestai,
             'canapproveai' => $canapproveai,
             'statebadge' => $statebadge,

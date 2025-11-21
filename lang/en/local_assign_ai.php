@@ -34,6 +34,7 @@ $string['aistatus_pending_help'] = 'AI proposal ready. Open the details to edit 
 $string['aistatus_pending_short'] = 'Pending approval';
 $string['aistatus_processing_help'] = 'AI is currently processing this submission. This may take a while.';
 $string['aistatus_queued_help'] = 'This submission has been queued and will start processing soon.';
+$string['aistatus_queued_short'] = 'queued';
 $string['aitaskdone'] = 'AI processing complete. Total submissions processed: {$a}';
 $string['aitaskstart'] = 'Processing AI submissions for course: {$a}';
 $string['aitaskuserqueued'] = 'Submission queued for user ID {$a->id} ({$a->name})';
