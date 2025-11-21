@@ -121,7 +121,7 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
     if ($graderdefault && !isset($options[$graderdefault])) {
         $graderuser = $DB->get_record(
             'user',
-            ['id' => $graderdefault], 
+            ['id' => $graderdefault],
             'id, firstname, lastname, firstnamephonetic, lastnamephonetic, middlename, alternatename'
         );
         if ($graderuser) {
