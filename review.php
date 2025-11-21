@@ -92,7 +92,7 @@ try {
         assign_submission::STATUS_PROCESSING,
         assign_submission::STATUS_PENDING,
     ];
-    list($insql, $inparams) = $DB->get_in_or_equal($statuses, SQL_PARAMS_NAMED, 'st');
+    [$insql, $inparams] = $DB->get_in_or_equal($statuses, SQL_PARAMS_NAMED, 'st');
     $select = "courseid = :courseid AND assignmentid = :assignmentid AND status $insql";
     $inparams['courseid'] = $course->id;
     $inparams['assignmentid'] = $cm->id;

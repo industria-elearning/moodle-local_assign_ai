@@ -291,5 +291,4 @@ class assign_submission {
             'maximum_grade' => $assignment->grade,
         ];
     }
-
 }

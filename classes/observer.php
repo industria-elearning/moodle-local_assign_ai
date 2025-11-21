@@ -69,7 +69,6 @@ class observer {
                 'cmid' => (int)$cmid,
             ]);
             \core\task\manager::queue_adhoc_task($task);
-
         } catch (\Exception $e) {
             debugging('Exception in submission_created observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }

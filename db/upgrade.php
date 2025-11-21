@@ -172,7 +172,6 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
     }
 
     if ($oldversion < 2025111404) {
-
         // Define field autograde to be added to local_assign_ai_config.
         $table = new xmldb_table('local_assign_ai_config');
         $field = new xmldb_field('autograde', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'assignmentid');
