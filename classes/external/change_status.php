@@ -20,6 +20,7 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
+require_once($CFG->dirroot . '/local/assign_ai/locallib.php');
 
 use external_api;
 use external_function_parameters;
@@ -41,7 +42,9 @@ class change_status extends external_api {
      */
     public static function execute_parameters() {
         return new external_function_parameters([
-            'token'  => new external_value(PARAM_ALPHANUM, 'Approval token', VALUE_REQUIRED),
+            'courseid' => new external_value(PARAM_INT, 'Course ID', VALUE_REQUIRED),
+            'cmid' => new external_value(PARAM_INT, 'Course module ID', VALUE_REQUIRED),
+            'userid' => new external_value(PARAM_INT, 'User ID', VALUE_REQUIRED),
             'action' => new external_value(PARAM_ALPHA, 'Action: approve or rejected', VALUE_REQUIRED),
         ]);
     }
@@ -49,20 +52,26 @@ class change_status extends external_api {
     /**
      * Executes the external function.
      *
-     * @param string $token The approval token.
+     * @param int $courseid Course ID.
+     * @param int $cmid Course module ID.
+     * @param int $userid User ID.
      * @param string $action The action to apply (approve or rejected).
      * @return array The result of the operation.
      */
-    public static function execute($token, $action) {
+    public static function execute($courseid, $cmid, $userid, $action) {
         global $DB, $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
-            'token'  => $token,
+            'courseid' => $courseid,
+            'cmid' => $cmid,
+            'userid' => $userid,
             'action' => $action,
         ]);
 
         $record = $DB->get_record('local_assign_ai_pending', [
-            'approval_token' => $params['token'],
+            'courseid' => $params['courseid'],
+            'assignmentid' => $params['cmid'],
+            'userid' => $params['userid'],
         ], '*', MUST_EXIST);
 
         $cm = get_coursemodule_from_id('assign', $record->assignmentid, 0, false, MUST_EXIST);
@@ -73,6 +82,7 @@ class change_status extends external_api {
 
         $record->status = $params['action'];
         $record->timemodified = time();
+        $record->usermodified = $USER->id ?? $record->usermodified;
         $DB->update_record('local_assign_ai_pending', $record);
 
         if ($params['action'] === 'approve') {
@@ -80,47 +90,7 @@ class change_status extends external_api {
             $context = \context_module::instance($cm->id);
             $course = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST);
             $assign = new \assign($context, $cm, $course);
-
-            $grade = $assign->get_user_grade($record->userid, true);
-            $gradepushed = false;
-
-            if ($grade) {
-                if ($record->grade !== null && $record->grade !== '') {
-                    $instancegrade = (float) $assign->get_instance()->grade;
-                    if ($instancegrade > 0) {
-                        $gradevalue = (float) $record->grade;
-                        // Clamp to the assignment grading range.
-                        $gradevalue = max(0, min($gradevalue, $instancegrade));
-                        $grade->grade = $gradevalue;
-                        $grade->grader = $USER->id;
-                        $gradepushed = $assign->update_grade($grade);
-                    } else {
-                        debugging('La tarea usa una escala, no se puede aplicar automáticamente la calificación numérica de la IA.', DEBUG_DEVELOPER);
-                    }
-                }
-
-                $feedback = $DB->get_record('assignfeedback_comments', ['grade' => $grade->id]);
-                if ($feedback) {
-                    $feedback->commenttext = $record->message;
-                    $feedback->commentformat = FORMAT_HTML;
-                    $DB->update_record('assignfeedback_comments', $feedback);
-                } else {
-                    $feedback = (object)[
-                        'assignment'     => $cm->instance,
-                        'grade'          => $grade->id,
-                        'commenttext'    => $record->message,
-                        'commentformat'  => FORMAT_HTML,
-                    ];
-                    $DB->insert_record('assignfeedback_comments', $feedback);
-                }
-
-                if (!$gradepushed) {
-                    $event = \mod_assign\event\submission_graded::create_from_grade($assign, $grade);
-                    $event->trigger();
-                }
-            } else {
-                debugging("No grade exists for userid={$record->userid}, assignid={$cm->instance}.", DEBUG_DEVELOPER);
-            }
+            local_assign_ai_apply_ai_feedback($assign, $record, $USER->id);
         }
 
         return [

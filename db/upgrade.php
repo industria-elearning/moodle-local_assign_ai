@@ -84,5 +84,120 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025092600, 'local', 'assign_ai');
     }
 
+    if ($oldversion < 2025111305) {
+        // Define field usermodified to be added to local_assign_ai_pending.
+        $table = new xmldb_table('local_assign_ai_pending');
+        $field = new xmldb_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'approval_token');
+
+        // Conditionally launch add field usermodified.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field timecreated to be added to local_assign_ai_pending.
+        $table = new xmldb_table('local_assign_ai_pending');
+        $field = new xmldb_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, null, null, '0', 'usermodified');
+
+        // Conditionally launch add field timecreated.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field timemodified to be added to local_assign_ai_pending.
+        $table = new xmldb_table('local_assign_ai_pending');
+        $field = new xmldb_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, null, null, '0', 'timecreated');
+
+        // Conditionally launch add field timemodified.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $now = time();
+
+        // Ensure timemodified always has a value.
+        $DB->execute(
+            "UPDATE {local_assign_ai_pending}
+                SET timemodified = :now
+              WHERE timemodified IS NULL OR timemodified = 0",
+            ['now' => $now]
+        );
+
+        // Use timemodified when timecreated was empty.
+        $DB->execute(
+            "UPDATE {local_assign_ai_pending}
+                SET timecreated = timemodified
+              WHERE (timecreated IS NULL OR timecreated = 0)
+                AND (timemodified IS NOT NULL AND timemodified > 0)"
+        );
+
+        // Fallback value for timecreated.
+        $DB->execute(
+            "UPDATE {local_assign_ai_pending}
+                SET timecreated = :now
+              WHERE timecreated IS NULL OR timecreated = 0",
+            ['now' => $now]
+        );
+
+        // Populate usermodified with the originating userid when missing.
+        $DB->execute(
+            "UPDATE {local_assign_ai_pending}
+                SET usermodified = userid
+              WHERE (usermodified IS NULL OR usermodified = 0)
+                AND userid IS NOT NULL"
+        );
+
+        // Assign_ai savepoint reached.
+        upgrade_plugin_savepoint(true, 2025111305, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2025111306) {
+        $table = new xmldb_table('local_assign_ai_config');
+
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('assignmentid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('autograde', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('assignmentid_uniq', XMLDB_KEY_UNIQUE, ['assignmentid']);
+        $table->add_key('config_user_fk', XMLDB_KEY_FOREIGN, ['usermodified'], 'user', ['id']);
+
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        upgrade_plugin_savepoint(true, 2025111306, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2025111404) {
+        // Define field autograde to be added to local_assign_ai_config.
+        $table = new xmldb_table('local_assign_ai_config');
+        $field = new xmldb_field('autograde', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0', 'assignmentid');
+
+        // Conditionally launch add field autograde.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define field graderid to be added to local_assign_ai_config.
+        $field = new xmldb_field('graderid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'autograde');
+
+        // Conditionally launch add field graderid.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define key config_grader_fk (foreign) to be added to local_assign_ai_config.
+        $key = new xmldb_key('config_grader_fk', XMLDB_KEY_FOREIGN, ['graderid'], 'user', ['id']);
+
+        // Launch add key config_grader_fk.
+        $dbman->add_key($table, $key);
+
+        // Assign_ai savepoint reached.
+        upgrade_plugin_savepoint(true, 2025111404, 'local', 'assign_ai');
+    }
+
     return true;
 }

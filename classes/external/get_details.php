@@ -45,22 +45,34 @@ class get_details extends external_api {
      */
     public static function execute_parameters() {
         return new external_function_parameters([
-            'token' => new external_value(PARAM_RAW, 'Approval token', VALUE_REQUIRED),
+            'courseid' => new external_value(PARAM_INT, 'Course ID', VALUE_REQUIRED),
+            'cmid' => new external_value(PARAM_INT, 'Course module ID', VALUE_REQUIRED),
+            'userid' => new external_value(PARAM_INT, 'User ID', VALUE_REQUIRED),
         ]);
     }
 
     /**
      * Executes the external function to retrieve approval details.
      *
-     * @param string $token The approval token.
+     * @param int $courseid Course ID.
+     * @param int $cmid Course module ID.
+     * @param int $userid User ID.
      * @return array The details of the pending approval.
      */
-    public static function execute($token) {
+    public static function execute($courseid, $cmid, $userid) {
         global $DB;
 
-        $params = self::validate_parameters(self::execute_parameters(), ['token' => $token]);
+        $params = self::validate_parameters(self::execute_parameters(), [
+            'courseid' => $courseid,
+            'cmid' => $cmid,
+            'userid' => $userid,
+        ]);
 
-        $record = $DB->get_record('local_assign_ai_pending', ['approval_token' => $params['token']], '*', MUST_EXIST);
+        $record = $DB->get_record('local_assign_ai_pending', [
+            'courseid' => $params['courseid'],
+            'assignmentid' => $params['cmid'],
+            'userid' => $params['userid'],
+        ], '*', MUST_EXIST);
 
         $cm = get_coursemodule_from_id('assign', $record->assignmentid, $record->courseid, false, MUST_EXIST);
         $context = \context_module::instance($cm->id);
@@ -69,7 +81,6 @@ class get_details extends external_api {
         require_capability('local/assign_ai:viewdetails', $context);
 
         return [
-            'token' => $record->approval_token,
             'message' => $record->message,
             'status' => $record->status,
             'userid' => $record->userid,
@@ -85,7 +96,6 @@ class get_details extends external_api {
      */
     public static function execute_returns() {
         return new external_single_structure([
-            'token' => new external_value(PARAM_RAW, 'Approval token'),
             'message' => new external_value(PARAM_RAW, 'AI message'),
             'status' => new external_value(PARAM_TEXT, 'AI status'),
             'userid' => new external_value(PARAM_INT, 'User ID'),

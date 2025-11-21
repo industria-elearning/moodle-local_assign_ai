@@ -16,6 +16,11 @@
 
 namespace local_assign_ai;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once($CFG->dirroot . '/local/assign_ai/locallib.php');
+require_once($CFG->dirroot . '/mod/assign/locallib.php');
+
 /**
  * Event observers for local_assign_ai.
  *
@@ -25,6 +30,50 @@ namespace local_assign_ai;
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class observer {
+    /**
+     * Handles the submission created event.
+     *
+     * If the assignment is configured to auto‑approve AI feedback, this will
+     * send the submission to the AI service for grading without teacher
+     * intervention. Otherwise, it does nothing.
+     *
+     * @param \mod_assign\event\submission_created $event The submission created event.
+     * @return void
+     */
+    public static function submission_created(\mod_assign\event\submission_created $event) {
+        global $DB;
+
+        try {
+            $data = $event->get_data();
+            $other = $data['other'];
+
+            if ($other['submissionstatus'] !== ASSIGN_SUBMISSION_STATUS_SUBMITTED) {
+                return;
+            }
+
+            $assign = $event->get_assign();
+            if (!$assign) {
+                return;
+            }
+
+            $userid = $data['relateduserid'] ?? null;
+            if (!$userid) {
+                return;
+            }
+
+            // Queue ad-hoc task to process AI submission with minimal data.
+            $cmid = $assign->get_course_module()->id;
+            $task = new \local_assign_ai\task\process_submission_ai();
+            $task->set_custom_data((object) [
+                'userid' => (int)$userid,
+                'cmid' => (int)$cmid,
+            ]);
+            \core\task\manager::queue_adhoc_task($task);
+        } catch (\Exception $e) {
+            debugging('Exception in submission_created observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
+    }
+
     /**
      * Normalizes a score to be saved as an int if it has no decimal places, or as a float otherwise.
      *
@@ -110,10 +159,57 @@ class observer {
             }
 
             $record->status = 'approve';
+            if (!empty($data['userid'])) {
+                $record->usermodified = $data['userid'];
+            }
             $record->timemodified = time();
             $DB->update_record('local_assign_ai_pending', $record);
         } catch (\Exception $e) {
             debugging('Exception in submission_graded observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
+    }
+
+    /**
+     * Resets AI pending records when a student edits a submission and multiple attempts are allowed.
+     *
+     * @param \mod_assign\event\submission_updated $event The submission updated event.
+     * @return void
+     */
+    public static function submission_updated(\mod_assign\event\submission_updated $event) {
+        global $DB;
+
+        try {
+            $assign = $event->get_assign();
+            if (!$assign) {
+                return;
+            }
+
+            $instance = $assign->get_instance();
+            $maxattempts = isset($instance->maxattempts) ? (int)$instance->maxattempts : 1;
+            $allowsmultiple = $maxattempts > 1 || $maxattempts === ASSIGN_UNLIMITED_ATTEMPTS;
+            if (!$allowsmultiple) {
+                return;
+            }
+
+            $data = $event->get_data();
+            $userid = $data['relateduserid'] ?? null;
+            if (!$userid) {
+                return;
+            }
+
+            $cmid = $assign->get_course_module()->id;
+            $record = $DB->get_record('local_assign_ai_pending', [
+                'assignmentid' => $cmid,
+                'userid' => $userid,
+            ]);
+
+            if (!$record || $record->status !== 'approve') {
+                return;
+            }
+
+            $DB->delete_records('local_assign_ai_pending', ['id' => $record->id]);
+        } catch (\Exception $e) {
+            debugging('Exception in submission_updated observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
     }
 }

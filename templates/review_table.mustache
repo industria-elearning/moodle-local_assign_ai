@@ -45,15 +45,51 @@
     </thead>
     <tbody>
         {{#rows}}
-        <tr>
+        <tr class="{{#ispending}}js-row-pending{{/ispending}} {{#inprogress}}js-row-inprogress{{/inprogress}} {{#isqueued}}js-row-queued{{/isqueued}}" data-userid="{{userid}}" data-cmid="{{cmid}}" data-courseid="{{courseid}}" data-pendingid="{{pendingid}}" data-status="{{aistatus}}">
             <td>{{fullname}}</td>
             <td>{{email}}</td>
             <td>{{status}}</td>
             <td>{{lastmodified}}</td>
-            <td>{{{files}}}</td>
+            <td>
+                {{#files}}
+                    <a href="{{url}}">{{name}}</a>
+                {{/files}}
+                {{^files}}
+                {{/files}}
+            </td>
             <td>{{grade}}</td>
-            <td>{{aistatus}}</td>
-            <td>{{{actions}}}</td>
+            <td>
+                <span class="{{statebadgeclass}} js-state-badge">{{statebadge}}</span>
+                <div class="text-muted small js-state-hint">{{statehint}}</div>
+                {{#inprogress}}
+                    <div class="small text-warning js-progress-indicator">
+                        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                    </div>
+                {{/inprogress}}
+            </td>
+            <td>
+                <div class="local_assign_ai_action-buttons">
+                    <a class="btn btn-primary btn-sm text-nowrap js-btn-grade {{#inprogress}}disabled{{/inprogress}} {{#isqueued}}disabled{{/isqueued}}"
+                       href="{{graderurl}}"
+                       {{#inprogress}}aria-disabled="true" tabindex="-1"{{/inprogress}}
+                       {{#isqueued}}aria-disabled="true" tabindex="-1"{{/isqueued}}>
+                        {{#str}} qualify, local_assign_ai {{/str}}
+                    </a>
+                    <button class="btn btn-success btn-sm text-nowrap view-details js-btn-details {{^canapproveai}}d-none{{/canapproveai}}"
+                        data-courseid="{{courseid}}"
+                        data-cmid="{{cmid}}"
+                        data-userid="{{userid}}" {{#inprogress}}disabled{{/inprogress}}>
+                        {{#str}} viewdetails, local_assign_ai {{/str}}
+                    </button>
+                    <button class="btn btn-warning btn-sm text-nowrap js-review-ai js-btn-review {{#canapproveai}}d-none{{/canapproveai}}"
+                        type="button"
+                        data-cmid="{{cmid}}"
+                        data-userid="{{userid}}"
+                        data-pendingid="{{pendingid}}" {{#inprogress}}disabled{{/inprogress}} {{#isqueued}}disabled{{/isqueued}}>
+                        {{#str}} review, local_assign_ai {{/str}}
+                    </button>
+                </div>
+            </td>
         </tr>
         {{/rows}}
         {{^rows}}
@@ -63,9 +99,3 @@
         {{/rows}}
     </tbody>
 </table>
-
-{{#headerlogo}}
-<a class="local_assign_ai-logo-wrapper" href="https://datacurso.com/" target="_blank" rel="noopener noreferrer">
-    <img src="{{logourl}}" alt="{{alttext}}" class="local_assign_ai-pluginlogo">
-</a>
-{{/headerlogo}}

@@ -80,3 +80,88 @@ function local_assign_ai_build_rubric_json(assign $assign) {
 
     return $rubric;
 }
+
+/**
+ * Retrieves cached configuration for a given assignment instance.
+ *
+ * @param int $assignmentid The assignment instance ID (from {assign}).
+ * @return stdClass|null
+ */
+function local_assign_ai_get_assignment_config(int $assignmentid) {
+    global $DB;
+
+    static $cache = [];
+
+    if (!$assignmentid) {
+        return null;
+    }
+
+    if (!array_key_exists($assignmentid, $cache)) {
+        $cache[$assignmentid] = $DB->get_record('local_assign_ai_config', ['assignmentid' => $assignmentid]);
+    }
+
+    return $cache[$assignmentid];
+}
+
+/**
+ * Checks whether auto-grading is enabled for a given assignment.
+ *
+ * @param assign $assign Assignment instance.
+ * @return bool
+ */
+function local_assign_ai_is_autograde_enabled(assign $assign): bool {
+    $config = local_assign_ai_get_assignment_config($assign->get_instance()->id);
+    return !empty($config) && !empty($config->autograde);
+}
+
+/**
+ * Applies AI feedback (grade + comments) to a submission and triggers grading events.
+ *
+ * @param assign $assign Assignment instance.
+ * @param stdClass $record Pending AI record.
+ * @param int $graderid User applying the change.
+ * @return void
+ */
+function local_assign_ai_apply_ai_feedback(assign $assign, stdClass $record, int $graderid): void {
+    global $DB;
+
+    $grade = $assign->get_user_grade($record->userid, true);
+    if (!$grade) {
+        debugging("No grade exists for userid={$record->userid}, assignid={$assign->get_instance()->id}.", DEBUG_DEVELOPER);
+        return;
+    }
+
+    $gradepushed = false;
+    $instancegrade = (float) $assign->get_instance()->grade;
+
+    if ($record->grade !== null && $record->grade !== '') {
+        if ($instancegrade > 0) {
+            $gradevalue = max(0, min((float)$record->grade, $instancegrade));
+            $grade->grade = $gradevalue;
+            $grade->grader = $graderid;
+            $gradepushed = $assign->update_grade($grade);
+        } else {
+            debugging('The assignment uses a scale; automatic numeric grading is not supported.', DEBUG_DEVELOPER);
+        }
+    }
+
+    $feedback = $DB->get_record('assignfeedback_comments', ['grade' => $grade->id]);
+    if ($feedback) {
+        $feedback->commenttext = $record->message;
+        $feedback->commentformat = FORMAT_HTML;
+        $DB->update_record('assignfeedback_comments', $feedback);
+    } else {
+        $feedback = (object)[
+            'assignment' => $assign->get_instance()->id,
+            'grade' => $grade->id,
+            'commenttext' => $record->message,
+            'commentformat' => FORMAT_HTML,
+        ];
+        $DB->insert_record('assignfeedback_comments', $feedback);
+    }
+
+    if (!$gradepushed) {
+        $event = \mod_assign\event\submission_graded::create_from_grade($assign, $grade);
+        $event->trigger();
+    }
+}

@@ -19,6 +19,8 @@ namespace local_assign_ai\external;
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/externallib.php');
+require_once($CFG->dirroot . '/mod/assign/locallib.php');
+require_once($CFG->dirroot . '/local/assign_ai/locallib.php');
 
 use external_api;
 use external_function_parameters;
@@ -26,16 +28,16 @@ use external_value;
 use external_single_structure;
 
 /**
- * External function to update the response message of a pending approval.
+ * External function to approve all pending AI feedback for an assignment.
  *
  * @package     local_assign_ai
  * @category    external
  * @copyright   2025 Datacurso
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class update_response extends external_api {
+class approve_all_pending extends external_api {
     /**
-     * Returns the description of the parameters for this external function.
+     * Parameters.
      *
      * @return external_function_parameters
      */
@@ -43,62 +45,66 @@ class update_response extends external_api {
         return new external_function_parameters([
             'courseid' => new external_value(PARAM_INT, 'Course ID', VALUE_REQUIRED),
             'cmid' => new external_value(PARAM_INT, 'Course module ID', VALUE_REQUIRED),
-            'userid' => new external_value(PARAM_INT, 'User ID', VALUE_REQUIRED),
-            'message' => new external_value(PARAM_RAW, 'Updated message', VALUE_REQUIRED),
         ]);
     }
 
     /**
-     * Executes the external function to update a pending approval response.
+     * Execute the approval for all pending records for the assignment.
      *
      * @param int $courseid Course ID.
      * @param int $cmid Course module ID.
-     * @param int $userid User ID.
-     * @param string $message The updated message.
-     * @return array The result of the operation.
+     * @return array Result with approved count.
      */
-    public static function execute($courseid, $cmid, $userid, $message) {
+    public static function execute($courseid, $cmid) {
         global $DB, $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'courseid' => $courseid,
             'cmid' => $cmid,
-            'userid' => $userid,
-            'message' => $message,
         ]);
 
-        $record = $DB->get_record('local_assign_ai_pending', [
-            'courseid' => $params['courseid'],
-            'assignmentid' => $params['cmid'],
-            'userid' => $params['userid'],
-        ], '*', MUST_EXIST);
-
-        $cm = get_coursemodule_from_id('assign', $record->assignmentid, 0, false, MUST_EXIST);
+        $cm = get_coursemodule_from_id('assign', $params['cmid'], 0, false, MUST_EXIST);
         $context = \context_module::instance($cm->id);
+        $course = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST);
 
         self::validate_context($context);
         require_capability('local/assign_ai:changestatus', $context);
 
-        $record->message = $params['message'];
-        $record->timemodified = time();
-        $record->usermodified = $USER->id ?? $record->usermodified;
-        $DB->update_record('local_assign_ai_pending', $record);
+        $assign = new \assign($context, $cm, $course);
+
+        $pendings = $DB->get_records('local_assign_ai_pending', [
+            'courseid' => $params['courseid'],
+            'assignmentid' => $params['cmid'],
+            'status' => \local_assign_ai\assign_submission::STATUS_PENDING,
+        ], 'id ASC');
+
+        $approved = 0;
+        foreach ($pendings as $record) {
+            $record->status = 'approve';
+            $record->timemodified = time();
+            $record->usermodified = $USER->id ?? $record->usermodified;
+            $DB->update_record('local_assign_ai_pending', $record);
+
+            // Apply feedback on approve.
+            local_assign_ai_apply_ai_feedback($assign, $record, $USER->id);
+            $approved++;
+        }
 
         return [
             'status' => 'ok',
-            'message' => $record->message,
+            'approved' => $approved,
         ];
     }
 
     /**
-     * Returns the description of the return values.
+     * Returns.
      *
      * @return external_single_structure
      */
     public static function execute_returns() {
         return new external_single_structure([
             'status' => new external_value(PARAM_TEXT, 'Operation status'),
-            'message' => new external_value(PARAM_RAW, 'Updated message'),
+            'approved' => new external_value(PARAM_INT, 'Number of approved records'),
         ]);
     }
 }

@@ -25,8 +25,11 @@
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class restore_local_assign_ai_plugin extends restore_local_plugin {
-    /** @var array Temporary storage for records (pending or approved). */
-    protected $temprecords = [];
+    /** @var array Temporary storage for pending/approved records. */
+    protected $pendingrecords = [];
+
+    /** @var array Temporary storage for assignment configuration rows. */
+    protected $configrecords = [];
 
     /**
      * Returns the definition of the restore paths for this plugin.
@@ -39,6 +42,10 @@ class restore_local_assign_ai_plugin extends restore_local_plugin {
                 'local_assign_ai_pending',
                 $this->get_pathfor('/assign_ai_pendings/assign_ai_pending')
             ),
+            new restore_path_element(
+                'local_assign_ai_config',
+                $this->get_pathfor('/assign_ai_configs/assign_ai_config')
+            ),
         ];
     }
 
@@ -50,7 +57,18 @@ class restore_local_assign_ai_plugin extends restore_local_plugin {
      */
     public function process_local_assign_ai_pending($data) {
         mtrace("   - Reading assign_ai record from XML (assignmentid={$data['assignmentid']}, status={$data['status']})");
-        $this->temprecords[] = (object)$data;
+        $this->pendingrecords[] = (object)$data;
+    }
+
+    /**
+     * Temporarily stores assignment configuration records from the backup file.
+     *
+     * @param array $data Configuration data from the backup file.
+     * @return void
+     */
+    public function process_local_assign_ai_config($data) {
+        mtrace("   - Reading assign_ai config from XML (assignmentid={$data['assignmentid']})");
+        $this->configrecords[] = (object)$data;
     }
 
     /**
@@ -65,97 +83,137 @@ class restore_local_assign_ai_plugin extends restore_local_plugin {
 
         mtrace(">> [local_assign_ai] Restoring AI feedback records (pending + approved)...");
 
-        if (empty($this->temprecords)) {
+        if (empty($this->pendingrecords)) {
             mtrace("   - No AI feedback data found in XML.");
-            return;
+        } else {
+            foreach ($this->pendingrecords as $recorddata) {
+                // Map course ID.
+                $newcourseid = $this->get_mappingid('course', $recorddata->courseid);
+                if (empty($newcourseid)) {
+                    $newcourseid = $recorddata->courseid;
+                }
+
+                // Map user ID.
+                $newuserid = $this->map_userid($recorddata->userid);
+
+                // Map assignment to new course module ID.
+                $newcmid = $this->get_mappingid('module', $recorddata->assignmentid);
+                if (empty($newcmid)) {
+                    $newcmid = $this->get_mappingid('activity', $recorddata->assignmentid);
+                }
+                if (empty($newcmid)) {
+                    $newcmid = $this->get_mappingid('assign', $recorddata->assignmentid);
+                }
+                if (empty($newcmid)) {
+                    $newcmid = $this->get_mappingid('assignment', $recorddata->assignmentid);
+                }
+                if (empty($newcmid)) {
+                    $newcmid = null;
+                }
+
+                // Fallback: search by title in the new course.
+                if (!$newcmid && !empty($recorddata->title)) {
+                    $newcmid = $DB->get_field_sql("
+                        SELECT cm.id
+                          FROM {course_modules} cm
+                          JOIN {modules} m ON m.id = cm.module
+                          JOIN {assign} a ON a.id = cm.instance
+                         WHERE cm.course = ? AND m.name = 'assign' AND a.name = ?
+                    ", [$newcourseid, $recorddata->title]);
+
+                    if ($newcmid) {
+                        mtrace("   - Mapped by title '{$recorddata->title}' → cm.id={$newcmid}");
+                    }
+                }
+
+                if (!$newcmid) {
+                    mtrace("   - Warning: could not map assignmentid={$recorddata->assignmentid}, keeping original.");
+                    $newcmid = $recorddata->assignmentid;
+                }
+
+                // Create restored record.
+                $record = new stdClass();
+                $record->courseid = $newcourseid;
+                $record->assignmentid = $newcmid;
+                $record->title = $recorddata->title;
+                $record->userid = $newuserid;
+                $record->usermodified = $this->map_userid($recorddata->usermodified ?? null);
+                $record->message = $recorddata->message;
+                $record->grade = $recorddata->grade;
+                $record->rubric_response = $recorddata->rubric_response;
+                $record->status = $recorddata->status;
+
+                // Always generate a new approval token to avoid duplicates with the original backup.
+                $record->approval_token = md5(uniqid('restored_', true));
+
+                // Set timestamps.
+                if (!empty($recorddata->timecreated)) {
+                    $record->timecreated = $recorddata->timecreated;
+                } else {
+                    $record->timecreated = time();
+                }
+
+                if (!empty($recorddata->timemodified)) {
+                    $record->timemodified = $recorddata->timemodified;
+                } else {
+                    $record->timemodified = time();
+                }
+
+                // Insert record into the database.
+                $DB->insert_record('local_assign_ai_pending', $record);
+                mtrace("   + Restored record → course={$newcourseid}, cm={$newcmid}, status={$record->status}");
+            }
         }
 
-        foreach ($this->temprecords as $recorddata) {
-            // Map course ID.
-            $newcourseid = $this->get_mappingid('course', $recorddata->courseid);
-            if (empty($newcourseid)) {
-                $newcourseid = $recorddata->courseid;
-            }
+        if (empty($this->configrecords)) {
+            mtrace("   - No AI configuration data found in XML.");
+        } else {
+            mtrace(">> [local_assign_ai] Restoring AI configuration records...");
+            foreach ($this->configrecords as $configdata) {
+                $newassignid = $this->get_mappingid('assign', $configdata->assignmentid);
+                if (empty($newassignid)) {
+                    $newassignid = $configdata->assignmentid;
+                }
 
-            // Map user ID.
-            $newuserid = $this->get_mappingid('user', $recorddata->userid);
-            if (empty($newuserid)) {
-                $newuserid = $recorddata->userid;
-            }
+                $record = new stdClass();
+                $record->assignmentid = $newassignid;
+                $record->autograde = $configdata->autograde;
+                $record->graderid = $this->map_userid($configdata->graderid ?? null);
+                $record->usermodified = $this->map_userid($configdata->usermodified ?? null);
+                $record->timecreated = !empty($configdata->timecreated) ? $configdata->timecreated : time();
+                $record->timemodified = !empty($configdata->timemodified) ? $configdata->timemodified : time();
 
-            // Map assignment to new course module ID.
-            $newcmid = $this->get_mappingid('module', $recorddata->assignmentid);
-            if (empty($newcmid)) {
-                $newcmid = $this->get_mappingid('activity', $recorddata->assignmentid);
-            }
-            if (empty($newcmid)) {
-                $newcmid = $this->get_mappingid('assign', $recorddata->assignmentid);
-            }
-            if (empty($newcmid)) {
-                $newcmid = $this->get_mappingid('assignment', $recorddata->assignmentid);
-            }
-            if (empty($newcmid)) {
-                $newcmid = null;
-            }
-
-            // Fallback: search by title in the new course.
-            if (!$newcmid && !empty($recorddata->title)) {
-                $newcmid = $DB->get_field_sql("
-                    SELECT cm.id
-                      FROM {course_modules} cm
-                      JOIN {modules} m ON m.id = cm.module
-                      JOIN {assign} a ON a.id = cm.instance
-                     WHERE cm.course = ? AND m.name = 'assign' AND a.name = ?
-                ", [$newcourseid, $recorddata->title]);
-
-                if ($newcmid) {
-                    mtrace("   - Mapped by title '{$recorddata->title}' → cm.id={$newcmid}");
+                $existing = $DB->get_record('local_assign_ai_config', ['assignmentid' => $record->assignmentid]);
+                if ($existing) {
+                    $record->id = $existing->id;
+                    $DB->update_record('local_assign_ai_config', $record);
+                    mtrace("   * Updated config for assignment {$record->assignmentid}");
+                } else {
+                    $DB->insert_record('local_assign_ai_config', $record);
+                    mtrace("   + Restored config for assignment {$record->assignmentid}");
                 }
             }
-
-            if (!$newcmid) {
-                mtrace("   - Warning: could not map assignmentid={$recorddata->assignmentid}, keeping original.");
-                $newcmid = $recorddata->assignmentid;
-            }
-
-            // Create restored record.
-            $record = new stdClass();
-            $record->courseid = $newcourseid;
-            $record->assignmentid = $newcmid;
-            $record->title = $recorddata->title;
-            $record->userid = $newuserid;
-            $record->message = $recorddata->message;
-            $record->grade = $recorddata->grade;
-            $record->rubric_response = $recorddata->rubric_response;
-            $record->status = $recorddata->status;
-
-            // Always generate a new approval token to avoid duplicates with the original backup.
-            $record->approval_token = md5(uniqid('restored_', true));
-
-            // Set timestamps.
-            if (!empty($recorddata->timecreated)) {
-                $record->timecreated = $recorddata->timecreated;
-            } else {
-                $record->timecreated = time();
-            }
-
-            if (!empty($recorddata->timemodified)) {
-                $record->timemodified = $recorddata->timemodified;
-            } else {
-                $record->timemodified = time();
-            }
-
-            if (isset($recorddata->approved_at)) {
-                $record->approved_at = $recorddata->approved_at;
-            } else {
-                $record->approved_at = null;
-            }
-
-            // Insert record into the database.
-            $DB->insert_record('local_assign_ai_pending', $record);
-            mtrace("   + Restored record → course={$newcourseid}, cm={$newcmid}, status={$record->status}");
         }
 
         mtrace(">> [local_assign_ai] Restoration completed");
+    }
+
+    /**
+     * Maps a user ID using restore mappings, falling back to the original value.
+     *
+     * @param int|null $oldid User ID from the backup data.
+     * @return int|null
+     */
+    protected function map_userid($oldid) {
+        if (empty($oldid)) {
+            return $oldid;
+        }
+
+        $newid = $this->get_mappingid('user', $oldid);
+        if (empty($newid)) {
+            return $oldid;
+        }
+
+        return $newid;
     }
 }

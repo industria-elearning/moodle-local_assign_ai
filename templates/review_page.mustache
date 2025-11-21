@@ -1,0 +1,41 @@
+{{!
+    @template local_assign_ai/review_page
+
+    Example context (json):
+    {
+        "backurl": "https://moodle.example.com/course/view.php?id=2",
+        "cmid": 5,
+        "courseid": 2,
+        "hasinitial": true,
+        "haspending": false,
+        "headerlogo": {
+            "logourl": "https://example.com/logo.svg",
+            "alttext": "Datacurso logo"
+        }
+    }
+}}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <a href="{{backurl}}" class="btn btn-secondary mb-2">{{#str}} backtocourse, local_assign_ai {{/str}}</a>
+        <h2 class="mb-0">{{#str}} reviewwithai, local_assign_ai {{/str}}</h2>
+    </div>
+    <div style="gap: 10px" class="d-flex gap-2 flex-wrap justify-content-end">
+        <button class="btn btn-warning js-review-ai js-review-all" type="button"
+            data-cmid="{{cmid}}" data-all="1" {{^hasinitial}}disabled{{/hasinitial}}>
+            {{#str}} reviewall, local_assign_ai {{/str}}
+        </button>
+        <button class="btn btn-success js-approve-all" type="button"
+            data-cmid="{{cmid}}" data-courseid="{{courseid}}" {{^haspending}}disabled{{/haspending}}>
+            {{#str}} approveall, local_assign_ai {{/str}}
+        </button>
+    </div>
+</div>
+
+{{> local_assign_ai/review_table }}
+
+{{#headerlogo}}
+<a class="local_assign_ai-logo-wrapper" href="https://datacurso.com/" target="_blank" rel="noopener noreferrer">
+    <img src="{{logourl}}" alt="{{alttext}}" class="local_assign_ai-pluginlogo">
+</a>
+{{/headerlogo}}
