@@ -60,12 +60,17 @@ if ($records) {
 
         $user = $users[$record->userid];
 
+        // Only show approved or rejected (error) statuses.
+        if (!in_array($record->status, ['approve', 'rejected'])) {
+            continue;
+        }
+
         switch ($record->status) {
             case 'approve':
                 $status = get_string('statusapprove', 'local_assign_ai');
                 break;
             case 'rejected':
-                $status = get_string('statusrejected', 'local_assign_ai');
+                $status = get_string('statuserror', 'local_assign_ai');
                 break;
             case 'pending':
             default:
@@ -79,16 +84,27 @@ if ($records) {
             $formattedmessage = format_text($record->message, FORMAT_HTML);
             $messagetext = shorten_text(strip_tags($formattedmessage), 180);
         } else {
+            $formattedmessage = '';
             $messagetext = '-';
         }
 
+        // Build direct grader URL for this user and assignment.
+        $graderurl = new moodle_url('/mod/assign/view.php', [
+            'id' => $cmid,
+            'action' => 'grader',
+            'userid' => $record->userid,
+        ]);
+
         $rows[] = [
+            'rowid' => (int)$record->id,
             'fullname' => fullname($user),
             'email' => s($user->email),
             'status' => $status,
             'grade' => $grade,
             'lastmodified' => $lastmodified,
             'message' => $messagetext,
+            'messagehtml' => $formattedmessage,
+            'graderurl' => $graderurl->out(false),
         ];
     }
 }
