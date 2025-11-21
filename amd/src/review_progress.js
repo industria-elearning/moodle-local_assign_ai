@@ -59,11 +59,16 @@ function hasActiveRows() {
     return !!document.querySelector('tr[data-status="processing"], tr[data-status="queued"], tr.js-row-inprogress, tr.js-row-queued');
 }
 
+function hasPendingRows() {
+    return !!document.querySelector('tr[data-status="pending"], tr.js-row-pending');
+}
+
 /**
  * Disable/enable the header buttons depending on current progress state.
  */
 function reflectHeaderButtonsState() {
     const anyActive = hasActiveRows();
+    const anyPending = hasPendingRows();
     const btnReviewAll = document.querySelector('.js-review-all');
     const btnApproveAll = document.querySelector('.js-approve-all');
 
@@ -71,10 +76,11 @@ function reflectHeaderButtonsState() {
         btnReviewAll.disabled = anyActive || btnReviewAll.disabled;
     }
     if (btnApproveAll) {
-        if (anyActive) {
-            btnApproveAll.setAttribute('disabled', 'disabled');
-        } else if (btnApproveAll.dataset.enableonidle === '1') {
+        const enableApprove = anyPending && !anyActive;
+        if (enableApprove) {
             btnApproveAll.removeAttribute('disabled');
+        } else {
+            btnApproveAll.setAttribute('disabled', 'disabled');
         }
     }
 }
