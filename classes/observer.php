@@ -65,8 +65,8 @@ class observer {
             $cmid = $assign->get_course_module()->id;
             $task = new \local_assign_ai\task\process_submission_ai();
             $task->set_custom_data((object) [
-                'userid' => (int)$userid,
-                'cmid' => (int)$cmid,
+                'userid' => (int) $userid,
+                'cmid' => (int) $cmid,
             ]);
             \core\task\manager::queue_adhoc_task($task);
         } catch (\Exception $e) {
@@ -184,32 +184,103 @@ class observer {
                 return;
             }
 
-            $instance = $assign->get_instance();
-            $maxattempts = isset($instance->maxattempts) ? (int)$instance->maxattempts : 1;
-            $allowsmultiple = $maxattempts > 1 || $maxattempts === ASSIGN_UNLIMITED_ATTEMPTS;
-            if (!$allowsmultiple) {
-                return;
-            }
-
             $data = $event->get_data();
             $userid = $data['relateduserid'] ?? null;
             if (!$userid) {
                 return;
             }
 
+            $submission = $assign->get_user_submission($userid, true);
+
             $cmid = $assign->get_course_module()->id;
+
             $record = $DB->get_record('local_assign_ai_pending', [
                 'assignmentid' => $cmid,
                 'userid' => $userid,
             ]);
 
-            if (!$record || $record->status !== 'approve') {
+            if (!$record) {
+                $task = new \local_assign_ai\task\process_submission_ai();
+                $task->set_custom_data((object) [
+                    'userid' => (int) $userid,
+                    'cmid' => (int) $cmid,
+                ]);
+                \core\task\manager::queue_adhoc_task($task);
+
                 return;
             }
 
-            $DB->delete_records('local_assign_ai_pending', ['id' => $record->id]);
+            if (!$submission || $submission->status !== ASSIGN_SUBMISSION_STATUS_SUBMITTED) {
+                return;
+            }
+
+            if ($record->status === 'pending') {
+                $DB->delete_records('local_assign_ai_pending', ['id' => $record->id]);
+
+                $task = new \local_assign_ai\task\process_submission_ai();
+                $task->set_custom_data((object) [
+                    'userid' => (int) $userid,
+                    'cmid' => (int) $cmid,
+                ]);
+                \core\task\manager::queue_adhoc_task($task);
+
+                return;
+            }
+
+            if ($record->status === 'approve') {
+                $task = new \local_assign_ai\task\process_submission_ai();
+                $task->set_custom_data((object) [
+                    'userid' => (int) $userid,
+                    'cmid' => (int) $cmid,
+                ]);
+                \core\task\manager::queue_adhoc_task($task);
+
+                return;
+            }
         } catch (\Exception $e) {
             debugging('Exception in submission_updated observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
+    }
+
+    /**
+     * Handles the submission_status_updated event when a student removes their submission.
+     *
+     * @param \mod_assign\event\submission_status_updated $event The submission status updated event.
+     * @return void
+     */
+    public static function submission_status_updated(\mod_assign\event\submission_status_updated $event) {
+        global $DB;
+
+        try {
+            $data = $event->get_data();
+            $other = $data['other'];
+
+            if (
+                !isset($other['newstatus']) ||
+                ($other['newstatus'] !== ASSIGN_SUBMISSION_STATUS_NEW &&
+                    $other['newstatus'] !== ASSIGN_SUBMISSION_STATUS_DRAFT)
+            ) {
+                return;
+            }
+
+            $assign = $event->get_assign();
+            if (!$assign) {
+                return;
+            }
+
+            $userid = $data['relateduserid'] ?? null;
+            if (!$userid) {
+                return;
+            }
+
+            $cmid = $assign->get_course_module()->id;
+
+            $DB->delete_records('local_assign_ai_pending', [
+                'assignmentid' => $cmid,
+                'userid' => $userid,
+            ]);
+        } catch (\Exception $e) {
+            debugging('Exception in submission_status_updated observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
     }
 }
