@@ -61,7 +61,6 @@ class observer {
                 return;
             }
 
-            // Queue ad-hoc task to process AI submission with minimal data.
             $cmid = $assign->get_course_module()->id;
             $task = new \local_assign_ai\task\process_submission_ai();
             $task->set_custom_data((object) [
