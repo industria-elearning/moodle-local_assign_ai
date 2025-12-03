@@ -61,7 +61,6 @@ class observer {
                 return;
             }
 
-            // Queue ad-hoc task to process AI submission with minimal data.
             $cmid = $assign->get_course_module()->id;
             $task = new \local_assign_ai\task\process_submission_ai();
             $task->set_custom_data((object) [
@@ -105,10 +104,12 @@ class observer {
             $userid = $data['relateduserid'] ?? null;
             $gradeid = $data['objectid'] ?? null;
 
-            $record = $DB->get_record('local_assign_ai_pending', [
+            $records = $DB->get_records('local_assign_ai_pending', [
                 'assignmentid' => $cmid,
                 'userid' => $userid,
-            ]);
+            ], 'timemodified DESC');
+
+            $record = reset($records);
 
             if (!$record) {
                 return;
@@ -190,16 +191,23 @@ class observer {
                 return;
             }
 
+            $other = $data['other'] ?? [];
+
             $submission = $assign->get_user_submission($userid, true);
 
             $cmid = $assign->get_course_module()->id;
 
-            $record = $DB->get_record('local_assign_ai_pending', [
+            $records = $DB->get_records('local_assign_ai_pending', [
                 'assignmentid' => $cmid,
                 'userid' => $userid,
-            ]);
+            ], 'timemodified DESC');
+
+            $record = reset($records);
 
             if (!$record) {
+                if (!empty($other['oldstatus']) && $other['oldstatus'] === ASSIGN_SUBMISSION_STATUS_NEW) {
+                    return;
+                }
                 $task = new \local_assign_ai\task\process_submission_ai();
                 $task->set_custom_data((object) [
                     'userid' => (int) $userid,
@@ -281,6 +289,34 @@ class observer {
             ]);
         } catch (\Exception $e) {
             debugging('Exception in submission_status_updated observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
+    }
+
+    /**
+     * Deletes AI pending records when the teacher deletes the assignment activity.
+     *
+     * @param \core\event\course_module_deleted $event
+     * @return void
+     */
+    public static function course_module_deleted(\core\event\course_module_deleted $event) {
+        global $DB;
+
+        try {
+            if ($event->other['modulename'] !== 'assign') {
+                return;
+            }
+
+            $cmid = $event->contextinstanceid;
+
+            if (!$cmid) {
+                return;
+            }
+
+            $DB->delete_records('local_assign_ai_pending', [
+                'assignmentid' => $cmid,
+            ]);
+        } catch (\Exception $e) {
+            debugging('Exception in course_module_deleted observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
     }
 }

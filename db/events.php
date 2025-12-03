@@ -49,5 +49,15 @@ $observers = [
     [
         'eventname' => '\mod_assign\event\submission_status_updated',
         'callback' => '\local_assign_ai\observer::submission_status_updated',
+        'includefile' => '/local/assign_ai/classes/observer.php',
+        'internal' => false,
+        'priority'    => 9999,
+    ],
+    [
+        'eventname'   => '\core\event\course_module_deleted',
+        'callback'    => '\local_assign_ai\observer::course_module_deleted',
+        'includefile' => '/local/assign_ai/classes/observer.php',
+        'internal' => false,
+        'priority'    => 9999,
     ],
 ];
