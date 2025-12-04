@@ -105,59 +105,94 @@ class observer {
             $gradeid = $data['objectid'] ?? null;
 
             $records = $DB->get_records('local_assign_ai_pending', [
-                'assignmentid' => $cmid,
-                'userid' => $userid,
+            'assignmentid' => $cmid,
+            'userid' => $userid,
             ], 'timemodified DESC');
 
             $record = reset($records);
 
-            if (!$record) {
+            if (!$record || empty($record->rubric_response)) {
                 return;
             }
 
-            $feedback = $DB->get_record('assignfeedback_comments', ['grade' => $gradeid]);
-            if ($feedback && !empty($feedback->commenttext)) {
-                $record->message = $feedback->commenttext;
+            $rubricdata = json_decode($record->rubric_response, true);
+
+            if (!$rubricdata || !is_array($rubricdata)) {
+                debugging('Invalid rubric_response JSON', DEBUG_DEVELOPER);
+                return;
             }
 
-            $grade = $DB->get_record('assign_grades', ['id' => $gradeid]);
-            if ($grade && isset($grade->grade)) {
-                $record->grade = self::normalize_points($grade->grade);
+            $instances = $DB->get_records(
+                'grading_instances',
+                ['itemid' => $gradeid],
+                'timemodified DESC'
+            );
+
+            if (!$instances) {
+                debugging('No grading instances found', DEBUG_DEVELOPER);
+                return;
             }
 
-            $instances = $DB->get_records('grading_instances', [
-                'itemid' => $gradeid,
-                'status' => 1,
-            ]);
+            $gradinginstance = reset($instances);
 
-            if ($instances) {
-                foreach ($instances as $gi) {
-                    $fillings = $DB->get_records('gradingform_rubric_fillings', ['instanceid' => $gi->id]);
-                    if ($fillings) {
-                        $rubricdata = [];
-                        foreach ($fillings as $f) {
-                            $criterion = $DB->get_field('gradingform_rubric_criteria', 'description', ['id' => $f->criterionid]);
-                            $score = $f->levelid
-                                ? $DB->get_field('gradingform_rubric_levels', 'score', ['id' => $f->levelid])
-                                : 0;
-
-                            $rubricdata[] = [
-                                'criterion' => $criterion,
-                                'levels' => [
-                                    [
-                                        'points' => self::normalize_points($score),
-                                        'comment' => $f->remark ?? '',
-                                    ],
-                                ],
-                            ];
-                        }
-
-                        $record->rubric_response = json_encode($rubricdata, JSON_UNESCAPED_UNICODE);
-
-                        break;
-                    }
+            foreach ($instances as $instance) {
+                if ($instance->id != $gradinginstance->id) {
+                    $DB->delete_records('gradingform_rubric_fillings', [
+                    'instanceid' => $instance->id,
+                    ]);
+                    $DB->delete_records('grading_instances', [
+                        'id' => $instance->id,
+                    ]);
                 }
             }
+
+            $DB->delete_records('gradingform_rubric_fillings', [
+            'instanceid' => $gradinginstance->id,
+            ]);
+
+            $definitionid = $gradinginstance->definitionid;
+
+            foreach ($rubricdata as $criteriondata) {
+                $criteriondesc = $criteriondata['criterion'] ?? '';
+                $levels = $criteriondata['levels'] ?? [];
+
+                if (empty($levels)) {
+                    continue;
+                }
+
+                $leveldata = reset($levels);
+                $points = $leveldata['points'] ?? 0;
+                $comment = $leveldata['comment'] ?? '';
+
+                $criterion = $DB->get_record('gradingform_rubric_criteria', [
+                'definitionid' => $definitionid,
+                'description' => $criteriondesc,
+                ]);
+
+                if (!$criterion) {
+                        debugging("Criterion not found: {$criteriondesc}", DEBUG_DEVELOPER);
+                        continue;
+                }
+
+                $level = $DB->get_record('gradingform_rubric_levels', [
+                    'criterionid' => $criterion->id,
+                    'score' => $points,
+                ]);
+
+                $levelid = $level ? $level->id : null;
+
+                $filling = new \stdClass();
+                $filling->instanceid = $gradinginstance->id;
+                $filling->criterionid = $criterion->id;
+                $filling->levelid = $levelid;
+                $filling->remark = $comment;
+
+                $DB->insert_record('gradingform_rubric_fillings', $filling);
+            }
+
+            $gradinginstance->status = 1;
+            $gradinginstance->timemodified = time();
+            $DB->update_record('grading_instances', $gradinginstance);
 
             $record->status = 'approve';
             if (!empty($data['userid'])) {
