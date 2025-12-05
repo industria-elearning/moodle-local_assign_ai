@@ -32,4 +32,8 @@ $callbacks = [
         'callback' => 'local_assign_ai\hook\output_hook::before_footer_html_generation',
         'priority' => 900,
     ],
+    [
+        'hook' => \core\hook\output\before_standard_head_html_generation::class,
+        'callback' => 'local_assign_ai\hook\before_standard_head_html_generation::before_standard_html_head',
+    ],
 ];
