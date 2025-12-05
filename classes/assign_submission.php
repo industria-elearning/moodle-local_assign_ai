@@ -114,7 +114,7 @@ class assign_submission {
         $response = client::send_to_ai($payload);
 
         $message = $response['reply'] ?? null;
-        $grade = isset($response['grade']) ? (is_numeric($response['grade']) ? (float)$response['grade'] : null) : null;
+        $grade = isset($response['grade']) ? (is_numeric($response['grade']) ? (float) $response['grade'] : null) : null;
         $rubricresponse = json_encode($response['rubric'], JSON_UNESCAPED_UNICODE) ?? null;
 
         $record = (object) [
@@ -123,7 +123,7 @@ class assign_submission {
             'userid' => $this->user->id,
             'title' => $assignment->name,
             'message' => $message,
-            'grade' => $grade !== null ? (int)round($grade) : null,
+            'grade' => $grade !== null ? (int) round($grade) : null,
             'rubric_response' => $rubricresponse,
             'status' => self::STATUS_APPROVED,
         ];
@@ -165,12 +165,12 @@ class assign_submission {
         $response = client::send_to_ai($payload);
 
         $message = $response['reply'] ?? null;
-        $grade = isset($response['grade']) ? (is_numeric($response['grade']) ? (float)$response['grade'] : null) : null;
+        $grade = isset($response['grade']) ? (is_numeric($response['grade']) ? (float) $response['grade'] : null) : null;
         $rubricresponse = json_encode($response['rubric'], JSON_UNESCAPED_UNICODE) ?? null;
 
         $data = [
             'message' => $message,
-            'grade' => $grade !== null ? (int)round($grade) : null,
+            'grade' => $grade !== null ? (int) round($grade) : null,
             'rubric_response' => $rubricresponse,
             'status' => self::STATUS_PENDING,
         ];
@@ -204,6 +204,9 @@ class assign_submission {
         $transaction = $DB->start_delegated_transaction();
         try {
             $now = time();
+            if (empty($record->approval_token)) {
+                $record->approval_token = random_string(10);
+            }
             $record->status = $record->status ?? self::STATUS_PENDING;
             $record->usermodified = $USER->id;
             $record->timecreated = $now;
