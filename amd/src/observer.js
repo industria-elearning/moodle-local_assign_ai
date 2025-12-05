@@ -31,51 +31,37 @@ import Config from 'core/config';
  * the AI approval token for the current student, and triggers
  * injection of AI-generated feedback into the grader interface.
  *
- * Activates automatically when the grader is loaded.
+ * @returns {Promise<void>}
  */
 export const init = async () => {
 
-    const debug = msg => Notification.addNotification({
-        message: `[AI DEBUG] ${msg}`,
-        type: 'warning'
-    });
-
     const params = new URLSearchParams(window.location.search);
-
     const userid = parseInt(params.get('userid'));
     const assignmentid = parseInt(params.get('id'));
     const courseid = Config.courseId || Config.courseid;
 
     if (!userid || !assignmentid || !courseid) {
-        debug(`I couldn't get parameters. userid=${userid}, assignmentid=${assignmentid}, courseid=${courseid}`);
         return;
     }
 
-    debug(`URL params → userid=${userid}, assignmentid=${assignmentid}, courseid=${courseid}`);
-
     try {
-
         const response = await Ajax.call([{
             methodname: 'local_assign_ai_get_token',
             args: { userid, assignmentid }
         }])[0];
 
-        if (response?.approval_token) {
-
-            debug(`Token found: ${response.approval_token}`);
-
-            InjectAI.init({
-                token: response.approval_token,
-                userid,
-                assignmentid,
-                courseid
-            });
-
-        } else {
-            debug("There is no token for this user and this task.");
+        if (!response?.approval_token) {
+            return;
         }
 
+        InjectAI.init({
+            token: response.approval_token,
+            userid,
+            assignmentid,
+            courseid
+        });
+
     } catch (err) {
-        debug(`ERROR WS get_token: ${err.message}`);
+        Notification.exception(err);
     }
 };

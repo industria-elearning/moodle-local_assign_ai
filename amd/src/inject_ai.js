@@ -38,10 +38,6 @@ import { get_string as getString } from 'core/str';
 export const init = async ({ token, userid, assignmentid, courseid }) => {
 
     if (!token || !userid || !assignmentid || !courseid) {
-        Notification.addNotification({
-            message: `[AI DEBUG] Parámetros insuficientes para get_details.`,
-            type: 'error'
-        });
         return;
     }
 
