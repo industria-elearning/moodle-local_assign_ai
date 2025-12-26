@@ -97,12 +97,45 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
         return;
     }
 
-    $assignid = $formwrapper->get_current()->instance ?? 0;
-    $config = $assignid ? local_assign_ai_get_assignment_config($assignid) : null;
-    $default = $config->autograde ?? 0;
+    $assignid = $formwrapper->get_current()->instance ?? null;
+    $tenantid = \tool_tenant\tenancy::get_tenant_id();
+
+    // Load tenant-aware configuration.
+    $config = null;
+    if ($assignid) {
+        if ($tenantid === null) {
+            $sql = "SELECT * FROM {local_assign_ai_config}
+                    WHERE assignmentid = :assignmentid AND tenantid IS NULL";
+            $params = ['assignmentid' => $assignid];
+        } else {
+            $sql = "SELECT * FROM {local_assign_ai_config}
+                    WHERE assignmentid = :assignmentid AND tenantid = :tenantid";
+            $params = [
+                'assignmentid' => $assignid,
+                'tenantid' => $tenantid,
+            ];
+        }
+
+        $config = $DB->get_record_sql($sql, $params);
+
+        // Fallback legacy.
+        if (!$config && $tenantid !== null) {
+            $config = $DB->get_record('local_assign_ai_config', [
+                'assignmentid' => $assignid,
+                'tenantid' => null,
+            ]);
+        }
+    }
+
+    $defaultautograde = $config->autograde ?? 0;
     $graderdefault = $config->graderid ?? null;
 
-    $mform->addElement('header', 'local_assign_ai_header', get_string('aiconfigheader', 'local_assign_ai'));
+    $mform->addElement(
+        'header',
+        'local_assign_ai_header',
+        get_string('aiconfigheader', 'local_assign_ai')
+    );
+
     $mform->addElement(
         'select',
         'local_assign_ai_autograde',
@@ -110,14 +143,17 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
         [0 => get_string('no'), 1 => get_string('yes')]
     );
     $mform->addHelpButton('local_assign_ai_autograde', 'autograde', 'local_assign_ai');
-    $mform->setDefault('local_assign_ai_autograde', $default);
+    $mform->setDefault('local_assign_ai_autograde', $defaultautograde);
 
+    // Eligible graders.
     $eligibleusers = get_enrolled_users($context, 'mod/assign:grade');
     $options = [];
+
     foreach ($eligibleusers as $user) {
         $options[$user->id] = fullname($user);
     }
 
+    // Ensure saved grader appears.
     if ($graderdefault && !isset($options[$graderdefault])) {
         $graderuser = $DB->get_record(
             'user',
@@ -140,16 +176,17 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
         $options,
         [
             'multiple' => false,
-            'tags' => false,
             'maxitems' => 1,
             'noselectionstring' => get_string('none'),
         ]
     );
     $mform->setType('local_assign_ai_grader', PARAM_INT);
     $mform->addHelpButton('local_assign_ai_grader', 'autogradegrader', 'local_assign_ai');
+
     if ($graderdefault) {
         $mform->setDefault('local_assign_ai_grader', (int)$graderdefault);
     }
+
     $mform->hideIf('local_assign_ai_grader', 'local_assign_ai_autograde', 'neq', 1);
 }
 
@@ -167,22 +204,52 @@ function local_assign_ai_coursemodule_edit_post_actions($data, $course) {
         return $data;
     }
 
-    $record = $DB->get_record('local_assign_ai_config', ['assignmentid' => $data->instance]);
+    $tenantid = \tool_tenant\tenancy::get_tenant_id();
+
+    // Load tenant-aware record.
+    if ($tenantid === null) {
+        $sql = "SELECT * FROM {local_assign_ai_config}
+                WHERE assignmentid = :assignmentid AND tenantid IS NULL";
+        $params = ['assignmentid' => $data->instance];
+    } else {
+        $sql = "SELECT * FROM {local_assign_ai_config}
+                WHERE assignmentid = :assignmentid AND tenantid = :tenantid";
+        $params = [
+            'assignmentid' => $data->instance,
+            'tenantid' => $tenantid,
+        ];
+    }
+
+    $record = $DB->get_record_sql($sql, $params);
+
+    // Migrate legacy config to tenant.
+    if (!$record && $tenantid !== null) {
+        $legacy = $DB->get_record('local_assign_ai_config', [
+            'assignmentid' => $data->instance,
+            'tenantid' => null,
+        ]);
+
+        if ($legacy) {
+            $legacy->tenantid = $tenantid;
+            $legacy->timemodified = time();
+            $DB->update_record('local_assign_ai_config', $legacy);
+            $record = $legacy;
+        }
+    }
+
+    // Resolve grader.
     $graderid = $record->graderid ?? null;
     if (property_exists($data, 'local_assign_ai_grader')) {
         $value = $data->local_assign_ai_grader;
         if (is_array($value)) {
             $value = reset($value);
         }
-        if (!empty($value)) {
-            $graderid = (int)$value;
-        } else {
-            $graderid = null;
-        }
+        $graderid = !empty($value) ? (int)$value : null;
     }
 
     $config = (object)[
         'assignmentid' => $data->instance,
+        'tenantid' => $tenantid,
         'autograde' => empty($data->local_assign_ai_autograde) ? 0 : 1,
         'graderid' => $graderid,
         'timemodified' => time(),

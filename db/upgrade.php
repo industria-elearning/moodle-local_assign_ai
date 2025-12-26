@@ -199,5 +199,51 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025111404, 'local', 'assign_ai');
     }
 
+    if ($oldversion < 2025120501) {
+        // Define field tenantid to be added to local_assign_ai_config.
+        $table = new xmldb_table('local_assign_ai_config');
+        $field = new xmldb_field('tenantid', XMLDB_TYPE_INTEGER, '10', null, null, null, '0', 'assignmentid');
+
+        // Conditionally launch add field tenantid.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Assign_ai savepoint reached.
+        upgrade_plugin_savepoint(true, 2025120501, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2025120503) {
+        $table = new xmldb_table('local_assign_ai_config');
+
+        $oldkey = new xmldb_key(
+            'assignmentid_uniq',
+            XMLDB_KEY_UNIQUE,
+            ['assignmentid']
+        );
+
+        if ($dbman->find_key_name($table, $oldkey) !== false) {
+            $dbman->drop_key($table, $oldkey);
+        }
+
+        upgrade_plugin_savepoint(true, 2025120503, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2025120504) {
+        $table = new xmldb_table('local_assign_ai_config');
+
+        $newkey = new xmldb_key(
+            'assignmentid_uniq',
+            XMLDB_KEY_UNIQUE,
+            ['assignmentid', 'tenantid']
+        );
+
+        if ($dbman->find_key_name($table, $newkey) === false) {
+            $dbman->add_key($table, $newkey);
+        }
+
+        upgrade_plugin_savepoint(true, 2025120504, 'local', 'assign_ai');
+    }
+
     return true;
 }

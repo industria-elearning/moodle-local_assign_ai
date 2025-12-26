@@ -18,10 +18,12 @@ namespace local_assign_ai\privacy;
 
 use context;
 use core_privacy\local\metadata\collection;
+use core_privacy\local\metadata\provider as metadata_provider;
 use core_privacy\local\request\approved_userlist;
 use core_privacy\local\request\approved_contextlist;
 use core_privacy\local\request\contextlist;
 use core_privacy\local\request\core_userlist_provider;
+use core_privacy\local\request\plugin\provider as plugin_provider;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
 use stdClass;
@@ -33,10 +35,7 @@ use stdClass;
  * @copyright  2025 Datacurso
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class provider implements
-    core_userlist_provider,
-    \core_privacy\local\request\plugin\provider,
-    \core_privacy\local\metadata\provider {
+class provider implements core_userlist_provider, metadata_provider, plugin_provider {
     /**
      * Describe the types of personal data stored by this plugin.
      *
