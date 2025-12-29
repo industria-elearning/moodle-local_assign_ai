@@ -1,4 +1,4 @@
-# Assignment AI
+# Assignment AI for Moodle Workplace
 
 The Assignment AI plugin brings intelligent automation to the grading and feedback process within Moodle.
 Its main goal is to assist teachers and administrators in reviewing student submissions by analyzing the content of their assignments using Artificial Intelligence (AI).
@@ -19,6 +19,35 @@ This system does not replace teacher judgment — it acts as an assistant, suppo
 1. Log in to your Moodle site as an administrator and go to Site `Administration > Plugins > Install Plugins`.
 2. Upload the ZIP file with the plugin code. You'll only be prompted to add additional details if the plugin type isn't automatically detected.
 3. Check the plugin validation report and complete the installation.
+
+## Moodle Workplace – Multitenant support
+
+Assignment AI is fully compatible with **Moodle Workplace** and is designed to operate correctly in **multitenant environments**.
+
+In Moodle Workplace, multiple organizations (tenants) share the same platform while maintaining strict separation of data, configuration, and operational behavior. Assignment AI respects this architecture by ensuring that all configuration settings are stored and applied **per tenant**.
+
+### Tenant-aware configuration
+
+Each tenant manages its own Assignment AI configuration independently. This means that:
+
+- AI features can be enabled or disabled per tenant
+- Autograding and reviewer settings can be customized per organization
+- Changes made by one tenant do not affect other tenants on the same Workplace instance
+- Assignment AI behavior adapts automatically to the active tenant context
+
+This guarantees that organizations sharing a Moodle Workplace installation can use Assignment AI with full autonomy and without configuration conflicts.
+
+### Data isolation and consistency
+
+To ensure data integrity and consistency in multitenant deployments:
+
+- Configuration records are uniquely stored per assignment and tenant
+- Tenant isolation is enforced at the data level
+- Historical configurations remain intact and accessible within their respective tenant contexts
+
+This approach ensures reliable operation of Assignment AI across complex Workplace deployments, including environments with multiple organizations, departments, or client instances hosted on the same platform.
+
+Assignment AI seamlessly integrates into Moodle Workplace, following platform best practices and ensuring a secure, scalable, and predictable experience for all tenants.
 
 ## Manual installation
 
