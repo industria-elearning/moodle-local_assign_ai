@@ -88,6 +88,7 @@ $string['submission_new'] = 'Neu';
 $string['submission_none'] = 'Keine Einreichung';
 $string['submission_submitted'] = 'Eingereicht';
 $string['submittedfiles'] = 'Eingereichte Dateien';
+$string['task_process_ai_queue'] = 'Verzögerte Warteschlange von Assign AI verarbeiten';
 $string['unexpectederror'] = 'Unerwarteter Fehler: {$a}';
 $string['usedelay'] = 'Verzögerte Überprüfung verwenden';
 $string['usedelay_help'] = 'Wenn aktiviert, wird die KI-Überprüfung nach einer konfigurierbaren Wartezeit ausgeführt, anstatt sofort zu starten.';

@@ -88,6 +88,7 @@ $string['submission_new'] = 'Nouveau';
 $string['submission_none'] = 'Aucune soumission';
 $string['submission_submitted'] = 'Soumis';
 $string['submittedfiles'] = 'Fichiers soumis';
+$string['task_process_ai_queue'] = 'Traiter la file d’attente différée d’Assign AI';
 $string['unexpectederror'] = 'Erreur inattendue : {$a}';
 $string['usedelay'] = 'Utiliser une révision différée';
 $string['usedelay_help'] = 'Si activé, la révision par IA sera exécutée après un délai configurable au lieu d’être exécutée immédiatement.';

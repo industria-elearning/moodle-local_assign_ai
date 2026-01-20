@@ -110,6 +110,7 @@ $string['submission_new'] = 'Nuevo';
 $string['submission_none'] = 'Sin entrega';
 $string['submission_submitted'] = 'Enviado';
 $string['submittedfiles'] = 'Archivos enviados';
+$string['task_process_ai_queue'] = 'Procesar cola diferida de Assign AI';
 $string['unexpectederror'] = 'Ocurrió un error inesperado: {$a}';
 $string['usedelay'] = 'Usar revisión diferida';
 $string['usedelay_help'] = 'Si está activado, la revisión con IA se ejecutará después de un tiempo de espera configurable en lugar de ejecutarse inmediatamente.';

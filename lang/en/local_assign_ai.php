@@ -110,6 +110,7 @@ $string['submission_new'] = 'New';
 $string['submission_none'] = 'No submission';
 $string['submission_submitted'] = 'Submitted';
 $string['submittedfiles'] = 'Submitted files';
+$string['task_process_ai_queue'] = 'Process delayed Assign AI queue';
 $string['unexpectederror'] = 'An unexpected error occurred: {$a}';
 $string['usedelay'] = 'Use delayed review';
 $string['usedelay_help'] = 'If enabled, AI review will be executed after a configurable delay instead of immediately.';

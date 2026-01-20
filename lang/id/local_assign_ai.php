@@ -88,6 +88,7 @@ $string['submission_new'] = 'Baru';
 $string['submission_none'] = 'Tidak ada kiriman';
 $string['submission_submitted'] = 'Dikirim';
 $string['submittedfiles'] = 'Berkas dikirim';
+$string['task_process_ai_queue'] = 'Proses antrean tertunda Assign AI';
 $string['unexpectederror'] = 'Terjadi kesalahan tak terduga: {$a}';
 $string['usedelay'] = 'Gunakan peninjauan tertunda';
 $string['usedelay_help'] = 'Jika diaktifkan, peninjauan AI akan dijalankan setelah waktu tunggu yang dapat dikonfigurasi, bukan dijalankan segera.';

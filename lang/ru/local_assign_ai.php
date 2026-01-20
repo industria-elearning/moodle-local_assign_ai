@@ -88,6 +88,7 @@ $string['submission_new'] = 'Новое';
 $string['submission_none'] = 'Нет отправки';
 $string['submission_submitted'] = 'Отправлено';
 $string['submittedfiles'] = 'Отправленные файлы';
+$string['task_process_ai_queue'] = 'Обработать отложенную очередь Assign AI';
 $string['unexpectederror'] = 'Произошла непредвиденная ошибка: {$a}';
 $string['usedelay'] = 'Использовать отложенную проверку';
 $string['usedelay_help'] = 'Если включено, проверка с помощью ИИ будет выполнена после настраиваемой задержки, а не сразу.';

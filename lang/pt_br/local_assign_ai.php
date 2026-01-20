@@ -88,6 +88,7 @@ $string['submission_new'] = 'Novo';
 $string['submission_none'] = 'Sem envio';
 $string['submission_submitted'] = 'Enviado';
 $string['submittedfiles'] = 'Arquivos enviados';
+$string['task_process_ai_queue'] = 'Processar fila adiada do Assign AI';
 $string['unexpectederror'] = 'Ocorreu um erro inesperado: {$a}';
 $string['usedelay'] = 'Usar revisão atrasada';
 $string['usedelay_help'] = 'Se ativado, a revisão com IA será executada após um tempo de espera configurável em vez de ser executada imediatamente.';
