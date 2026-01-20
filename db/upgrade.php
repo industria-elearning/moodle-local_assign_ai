@@ -199,5 +199,30 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025111404, 'local', 'assign_ai');
     }
 
+    if ($oldversion < 2025120501) {
+
+        // Define table local_assign_ai_queue to be created.
+        $table = new xmldb_table('local_assign_ai_queue');
+
+        // Adding fields to table local_assign_ai_queue.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('type', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('payload', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timetoprocess', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('processed', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+
+        // Adding keys to table local_assign_ai_queue.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        // Conditionally launch create table for local_assign_ai_queue.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Assign_ai savepoint reached.
+        upgrade_plugin_savepoint(true, 2025120501, 'local', 'assign_ai');
+    }
+
     return true;
 }
