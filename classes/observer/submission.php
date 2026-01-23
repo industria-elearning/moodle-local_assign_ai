@@ -34,7 +34,8 @@ require_once($CFG->dirroot . '/mod/assign/locallib.php');
  * @copyright  2026 Datacurso
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class submission {
+class submission
+{
     /**
      * Handles the submission created event.
      *
@@ -45,7 +46,8 @@ class submission {
      * @param submission_created $event The submission created event.
      * @return void
      */
-    public static function submission_created(submission_created $event) {
+    public static function submission_created(submission_created $event)
+    {
         global $DB;
 
         try {
@@ -89,7 +91,8 @@ class submission {
      * @param submission_graded $event The grading event.
      * @return void
      */
-    public static function submission_graded(submission_graded $event) {
+    public static function submission_graded(submission_graded $event)
+    {
         global $DB;
 
         try {
@@ -99,8 +102,8 @@ class submission {
             $gradeid = $data['objectid'] ?? null;
 
             $records = $DB->get_records('local_assign_ai_pending', [
-            'assignmentid' => $cmid,
-            'userid' => $userid,
+                'assignmentid' => $cmid,
+                'userid' => $userid,
             ], 'timemodified DESC');
 
             $record = reset($records);
@@ -132,7 +135,7 @@ class submission {
             foreach ($instances as $instance) {
                 if ($instance->id != $gradinginstance->id) {
                     $DB->delete_records('gradingform_rubric_fillings', [
-                    'instanceid' => $instance->id,
+                        'instanceid' => $instance->id,
                     ]);
                     $DB->delete_records('grading_instances', [
                         'id' => $instance->id,
@@ -141,7 +144,7 @@ class submission {
             }
 
             $DB->delete_records('gradingform_rubric_fillings', [
-            'instanceid' => $gradinginstance->id,
+                'instanceid' => $gradinginstance->id,
             ]);
 
             $definitionid = $gradinginstance->definitionid;
@@ -159,13 +162,13 @@ class submission {
                 $comment = $leveldata['comment'] ?? '';
 
                 $criterion = $DB->get_record('gradingform_rubric_criteria', [
-                'definitionid' => $definitionid,
-                'description' => $criteriondesc,
+                    'definitionid' => $definitionid,
+                    'description' => $criteriondesc,
                 ]);
 
                 if (!$criterion) {
-                        debugging("Criterion not found: {$criteriondesc}", DEBUG_DEVELOPER);
-                        continue;
+                    debugging("Criterion not found: {$criteriondesc}", DEBUG_DEVELOPER);
+                    continue;
                 }
 
                 $level = $DB->get_record('gradingform_rubric_levels', [
@@ -205,7 +208,8 @@ class submission {
      * @param submission_updated $event The submission updated event.
      * @return void
      */
-    public static function submission_updated(submission_updated $event) {
+    public static function submission_updated(submission_updated $event)
+    {
         global $DB;
 
         try {
@@ -221,10 +225,10 @@ class submission {
             }
 
             $other = $data['other'] ?? [];
-
             $submission = $assign->get_user_submission($userid, true);
-
             $cmid = $assign->get_course_module()->id;
+
+            $config = local_assign_ai_get_assignment_config($assign->get_instance()->id);
 
             $records = $DB->get_records('local_assign_ai_pending', [
                 'assignmentid' => $cmid,
@@ -233,17 +237,50 @@ class submission {
 
             $record = reset($records);
 
+            $taskdata = (object) [
+                'userid' => (int) $userid,
+                'cmid' => (int) $cmid,
+            ];
+
+            $delete_from_queue = function () use ($DB, $userid, $cmid) {
+                $like1 = '%"userid":' . $userid . '%';
+                $like2 = '%"userid":"' . $userid . '"%';
+
+                $sql = "DELETE FROM {local_assign_ai_queue}
+                WHERE type = 'submission'
+                  AND (payload LIKE ? OR payload LIKE ?)";
+
+                $DB->execute($sql, [$like1, $like2]);
+            };
+
+            $enqueue_task = function () use ($config, $taskdata, $DB, $delete_from_queue) {
+
+                $delete_from_queue();
+
+                if (!empty($config->usedelay)) {
+                    $delay = max(1, (int) $config->delayminutes);
+                    $timetoprocess = time() + ($delay * 60);
+
+                    $DB->insert_record('local_assign_ai_queue', (object) [
+                        'type' => 'submission',
+                        'payload' => json_encode($taskdata),
+                        'timecreated' => time(),
+                        'timetoprocess' => $timetoprocess,
+                        'processed' => 0,
+                    ]);
+                    return;
+                }
+
+                $task = new process_submission_ai();
+                $task->set_custom_data($taskdata);
+                \core\task\manager::queue_adhoc_task($task);
+            };
+
             if (!$record) {
                 if (!empty($other['oldstatus']) && $other['oldstatus'] === ASSIGN_SUBMISSION_STATUS_NEW) {
                     return;
                 }
-                $task = new process_submission_ai();
-                $task->set_custom_data((object) [
-                    'userid' => (int) $userid,
-                    'cmid' => (int) $cmid,
-                ]);
-                \core\task\manager::queue_adhoc_task($task);
-
+                $enqueue_task();
                 return;
             }
 
@@ -253,39 +290,27 @@ class submission {
 
             if ($record->status === 'pending') {
                 $DB->delete_records('local_assign_ai_pending', ['id' => $record->id]);
-
-                $task = new process_submission_ai();
-                $task->set_custom_data((object) [
-                    'userid' => (int) $userid,
-                    'cmid' => (int) $cmid,
-                ]);
-                \core\task\manager::queue_adhoc_task($task);
-
+                $enqueue_task();
                 return;
             }
 
             if ($record->status === 'approve') {
-                $task = new process_submission_ai();
-                $task->set_custom_data((object) [
-                    'userid' => (int) $userid,
-                    'cmid' => (int) $cmid,
-                ]);
-                \core\task\manager::queue_adhoc_task($task);
-
+                $enqueue_task();
                 return;
             }
+
         } catch (\Exception $e) {
             debugging('Exception in submission_updated observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
     }
-
     /**
      * Handles the submission_status_updated event when a student removes their submission.
      *
      * @param submission_status_updated $event The submission status updated event.
      * @return void
      */
-    public static function submission_status_updated(submission_status_updated $event) {
+    public static function submission_status_updated(submission_status_updated $event)
+    {
         global $DB;
 
         try {
@@ -316,6 +341,16 @@ class submission {
                 'assignmentid' => $cmid,
                 'userid' => $userid,
             ]);
+
+            $like1 = '%"userid":' . $userid . '%';
+            $like2 = '%"userid":"' . $userid . '"%';
+
+            $sql = "DELETE FROM {local_assign_ai_queue}
+            WHERE type = 'submission'
+              AND (payload LIKE ? OR payload LIKE ?)";
+
+            $DB->execute($sql, [$like1, $like2]);
+
         } catch (\Exception $e) {
             debugging('Exception in submission_status_updated observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
