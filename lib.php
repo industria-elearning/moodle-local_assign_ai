@@ -102,7 +102,6 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
 
     $autograde = $config->autograde ?? 0;
     $graderdefault = $config->graderid ?? null;
-    $requireapproval = $config->require_approval ?? 1;
     $usedelay = $config->usedelay ?? 0;
     $delayminutes = max(1, (int)($config->delayminutes ?? 60));
 
@@ -115,15 +114,6 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
     );
     $mform->addHelpButton('local_assign_ai_autograde', 'autograde', 'local_assign_ai');
     $mform->setDefault('local_assign_ai_autograde', $autograde);
-
-    // Require approval.
-    $mform->addElement(
-        'select',
-        'local_assign_ai_require_approval',
-        get_string('require_approval', 'local_assign_ai'),
-        [1 => get_string('yes'), 0 => get_string('no')]
-    );
-    $mform->setDefault('local_assign_ai_require_approval', $requireapproval);
 
     // Use delay.
     $mform->addElement(
@@ -146,11 +136,11 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
     $mform->addHelpButton('local_assign_ai_delayminutes', 'delayminutes', 'local_assign_ai');
     $mform->setDefault('local_assign_ai_delayminutes', $delayminutes);
 
-    // Hide logic.
     $mform->hideIf('local_assign_ai_usedelay', 'local_assign_ai_autograde', 'neq', 1);
-    $mform->hideIf('local_assign_ai_delayminutes', 'local_assign_ai_usedelay', 'neq', 1);
     $mform->hideIf('local_assign_ai_delayminutes', 'local_assign_ai_autograde', 'neq', 1);
-    $mform->hideIf('local_assign_ai_usedelay', 'local_assign_ai_require_approval', 'eq', 1);
+    $mform->hideIf('local_assign_ai_grader', 'local_assign_ai_autograde', 'neq', 1);
+
+    $mform->hideIf('local_assign_ai_delayminutes', 'local_assign_ai_usedelay', 'neq', 1);
 
     $eligibleusers = get_enrolled_users($context, 'mod/assign:grade');
     $options = [];
@@ -222,14 +212,18 @@ function local_assign_ai_coursemodule_edit_post_actions($data, $course) {
     }
 
     $autograde = empty($data->local_assign_ai_autograde) ? 0 : 1;
-    $requireapproval = empty($data->local_assign_ai_require_approval) ? 0 : 1;
     $usedelay = empty($data->local_assign_ai_usedelay) ? 0 : 1;
     $delayminutes = max(1, (int)($data->local_assign_ai_delayminutes ?? 60));
+
+    if (!$autograde) {
+        $usedelay = 0;
+        $delayminutes = 0;
+        $graderid = null;
+    }
 
     $config = (object)[
         'assignmentid' => $data->instance,
         'autograde' => $autograde,
-        'require_approval' => $requireapproval,
         'usedelay' => $usedelay,
         'delayminutes' => $delayminutes,
         'graderid' => $graderid,

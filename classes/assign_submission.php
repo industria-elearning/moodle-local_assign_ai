@@ -23,7 +23,7 @@ use stdClass;
  * Class assign_submission
  *
  * @package    local_assign_ai
- * @copyright  2025 Wilber Narvaez <https://datacurso.com>
+ * @copyright  2025 Datacurso
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class assign_submission {
@@ -36,7 +36,7 @@ class assign_submission {
     /** Processing status when ad-hoc task is handling the record. */
     public const STATUS_PROCESSING = 'processing';
     /** Approved status after human review or AI grading. */
-    public const STATUS_APPROVED = 'approved';
+    public const STATUS_APPROVED = 'approve';
     /** Rejected status after human review. */
     public const STATUS_REJECTED = 'rejected';
 
