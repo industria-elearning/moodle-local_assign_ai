@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - https://moodle.org/
+// This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,24 +12,30 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_assign_ai;
+namespace local_assign_ai\observer;
 
 defined('MOODLE_INTERNAL') || die();
+
+use mod_assign\event\submission_created;
+use mod_assign\event\submission_updated;
+use mod_assign\event\submission_status_updated;
+use mod_assign\event\submission_graded;
+use local_assign_ai\task\process_submission_ai;
 
 require_once($CFG->dirroot . '/local/assign_ai/locallib.php');
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
 
 /**
- * Event observers for local_assign_ai.
+ * Observer for submission events.
  *
- * @package     local_assign_ai
- * @category    event
- * @copyright   2025 Datacurso
- * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package    local_assign_ai
+ * @copyright  2026 Datacurso
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class observer {
+class submission
+{
     /**
      * Handles the submission created event.
      *
@@ -37,10 +43,11 @@ class observer {
      * send the submission to the AI service for grading without teacher
      * intervention. Otherwise, it does nothing.
      *
-     * @param \mod_assign\event\submission_created $event The submission created event.
+     * @param submission_created $event The submission created event.
      * @return void
      */
-    public static function submission_created(\mod_assign\event\submission_created $event) {
+    public static function submission_created(submission_created $event)
+    {
         global $DB;
 
         try {
@@ -62,7 +69,7 @@ class observer {
             }
 
             $cmid = $assign->get_course_module()->id;
-            $task = new \local_assign_ai\task\process_submission_ai();
+            $task = new process_submission_ai();
             $task->set_custom_data((object) [
                 'userid' => (int) $userid,
                 'cmid' => (int) $cmid,
@@ -74,17 +81,6 @@ class observer {
     }
 
     /**
-     * Normalizes a score to be saved as an int if it has no decimal places, or as a float otherwise.
-     *
-     * @param mixed $score Score value (string, int or float).
-     * @return int|float
-     */
-    private static function normalize_points($score) {
-        $float = (float) $score;
-        return (fmod($float, 1.0) == 0.0) ? (int) $float : $float;
-    }
-
-    /**
      * Handles the grading event for a submission.
      *
      * Updates the local_assign_ai_pending table:
@@ -92,10 +88,11 @@ class observer {
      *  - The grade.
      *  - The rubric response (rubric_response).
      *
-     * @param \mod_assign\event\submission_graded $event The grading event.
+     * @param submission_graded $event The grading event.
      * @return void
      */
-    public static function submission_graded(\mod_assign\event\submission_graded $event) {
+    public static function submission_graded(submission_graded $event)
+    {
         global $DB;
 
         try {
@@ -105,8 +102,8 @@ class observer {
             $gradeid = $data['objectid'] ?? null;
 
             $records = $DB->get_records('local_assign_ai_pending', [
-            'assignmentid' => $cmid,
-            'userid' => $userid,
+                'assignmentid' => $cmid,
+                'userid' => $userid,
             ], 'timemodified DESC');
 
             $record = reset($records);
@@ -138,7 +135,7 @@ class observer {
             foreach ($instances as $instance) {
                 if ($instance->id != $gradinginstance->id) {
                     $DB->delete_records('gradingform_rubric_fillings', [
-                    'instanceid' => $instance->id,
+                        'instanceid' => $instance->id,
                     ]);
                     $DB->delete_records('grading_instances', [
                         'id' => $instance->id,
@@ -147,7 +144,7 @@ class observer {
             }
 
             $DB->delete_records('gradingform_rubric_fillings', [
-            'instanceid' => $gradinginstance->id,
+                'instanceid' => $gradinginstance->id,
             ]);
 
             $definitionid = $gradinginstance->definitionid;
@@ -165,13 +162,13 @@ class observer {
                 $comment = $leveldata['comment'] ?? '';
 
                 $criterion = $DB->get_record('gradingform_rubric_criteria', [
-                'definitionid' => $definitionid,
-                'description' => $criteriondesc,
+                    'definitionid' => $definitionid,
+                    'description' => $criteriondesc,
                 ]);
 
                 if (!$criterion) {
-                        debugging("Criterion not found: {$criteriondesc}", DEBUG_DEVELOPER);
-                        continue;
+                    debugging("Criterion not found: {$criteriondesc}", DEBUG_DEVELOPER);
+                    continue;
                 }
 
                 $level = $DB->get_record('gradingform_rubric_levels', [
@@ -208,10 +205,11 @@ class observer {
     /**
      * Resets AI pending records when a student edits a submission and multiple attempts are allowed.
      *
-     * @param \mod_assign\event\submission_updated $event The submission updated event.
+     * @param submission_updated $event The submission updated event.
      * @return void
      */
-    public static function submission_updated(\mod_assign\event\submission_updated $event) {
+    public static function submission_updated(submission_updated $event)
+    {
         global $DB;
 
         try {
@@ -227,10 +225,10 @@ class observer {
             }
 
             $other = $data['other'] ?? [];
-
             $submission = $assign->get_user_submission($userid, true);
-
             $cmid = $assign->get_course_module()->id;
+
+            $config = local_assign_ai_get_assignment_config($assign->get_instance()->id);
 
             $records = $DB->get_records('local_assign_ai_pending', [
                 'assignmentid' => $cmid,
@@ -239,17 +237,50 @@ class observer {
 
             $record = reset($records);
 
+            $taskdata = (object) [
+                'userid' => (int) $userid,
+                'cmid' => (int) $cmid,
+            ];
+
+            $delete_from_queue = function () use ($DB, $userid, $cmid) {
+                $like1 = '%"userid":' . $userid . '%';
+                $like2 = '%"userid":"' . $userid . '"%';
+
+                $sql = "DELETE FROM {local_assign_ai_queue}
+                WHERE type = 'submission'
+                  AND (payload LIKE ? OR payload LIKE ?)";
+
+                $DB->execute($sql, [$like1, $like2]);
+            };
+
+            $enqueue_task = function () use ($config, $taskdata, $DB, $delete_from_queue) {
+
+                $delete_from_queue();
+
+                if (!empty($config->usedelay)) {
+                    $delay = max(1, (int) $config->delayminutes);
+                    $timetoprocess = time() + ($delay * 60);
+
+                    $DB->insert_record('local_assign_ai_queue', (object) [
+                        'type' => 'submission',
+                        'payload' => json_encode($taskdata),
+                        'timecreated' => time(),
+                        'timetoprocess' => $timetoprocess,
+                        'processed' => 0,
+                    ]);
+                    return;
+                }
+
+                $task = new process_submission_ai();
+                $task->set_custom_data($taskdata);
+                \core\task\manager::queue_adhoc_task($task);
+            };
+
             if (!$record) {
                 if (!empty($other['oldstatus']) && $other['oldstatus'] === ASSIGN_SUBMISSION_STATUS_NEW) {
                     return;
                 }
-                $task = new \local_assign_ai\task\process_submission_ai();
-                $task->set_custom_data((object) [
-                    'userid' => (int) $userid,
-                    'cmid' => (int) $cmid,
-                ]);
-                \core\task\manager::queue_adhoc_task($task);
-
+                $enqueue_task();
                 return;
             }
 
@@ -259,39 +290,27 @@ class observer {
 
             if ($record->status === 'pending') {
                 $DB->delete_records('local_assign_ai_pending', ['id' => $record->id]);
-
-                $task = new \local_assign_ai\task\process_submission_ai();
-                $task->set_custom_data((object) [
-                    'userid' => (int) $userid,
-                    'cmid' => (int) $cmid,
-                ]);
-                \core\task\manager::queue_adhoc_task($task);
-
+                $enqueue_task();
                 return;
             }
 
             if ($record->status === 'approve') {
-                $task = new \local_assign_ai\task\process_submission_ai();
-                $task->set_custom_data((object) [
-                    'userid' => (int) $userid,
-                    'cmid' => (int) $cmid,
-                ]);
-                \core\task\manager::queue_adhoc_task($task);
-
+                $enqueue_task();
                 return;
             }
+
         } catch (\Exception $e) {
             debugging('Exception in submission_updated observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
     }
-
     /**
      * Handles the submission_status_updated event when a student removes their submission.
      *
-     * @param \mod_assign\event\submission_status_updated $event The submission status updated event.
+     * @param submission_status_updated $event The submission status updated event.
      * @return void
      */
-    public static function submission_status_updated(\mod_assign\event\submission_status_updated $event) {
+    public static function submission_status_updated(submission_status_updated $event)
+    {
         global $DB;
 
         try {
@@ -322,36 +341,18 @@ class observer {
                 'assignmentid' => $cmid,
                 'userid' => $userid,
             ]);
+
+            $like1 = '%"userid":' . $userid . '%';
+            $like2 = '%"userid":"' . $userid . '"%';
+
+            $sql = "DELETE FROM {local_assign_ai_queue}
+            WHERE type = 'submission'
+              AND (payload LIKE ? OR payload LIKE ?)";
+
+            $DB->execute($sql, [$like1, $like2]);
+
         } catch (\Exception $e) {
             debugging('Exception in submission_status_updated observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
-        }
-    }
-
-    /**
-     * Deletes AI pending records when the teacher deletes the assignment activity.
-     *
-     * @param \core\event\course_module_deleted $event
-     * @return void
-     */
-    public static function course_module_deleted(\core\event\course_module_deleted $event) {
-        global $DB;
-
-        try {
-            if ($event->other['modulename'] !== 'assign') {
-                return;
-            }
-
-            $cmid = $event->contextinstanceid;
-
-            if (!$cmid) {
-                return;
-            }
-
-            $DB->delete_records('local_assign_ai_pending', [
-                'assignmentid' => $cmid,
-            ]);
-        } catch (\Exception $e) {
-            debugging('Exception in course_module_deleted observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
     }
 }

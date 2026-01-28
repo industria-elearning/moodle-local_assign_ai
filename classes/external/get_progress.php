@@ -75,7 +75,7 @@ class get_progress extends external_api {
         }
 
         [$insql, $inparams] = $DB->get_in_or_equal($pendingids, SQL_PARAMS_NAMED);
-        $records = $DB->get_records_select('local_assign_ai_pending', "id $insql", $inparams, '', 'id, status');
+        $records = $DB->get_records_select('local_assign_ai_pending', "id $insql", $inparams, '', 'id, status, grade');
 
         $out = [];
         foreach ($records as $r) {
@@ -84,6 +84,7 @@ class get_progress extends external_api {
             $out[] = [
                 'id' => (int)$r->id,
                 'status' => $status,
+                'grade' => $r->grade !== null ? (int)$r->grade : null,
             ];
         }
         return $out;
@@ -97,6 +98,7 @@ class get_progress extends external_api {
         return new external_multiple_structure(new external_single_structure([
             'id' => new external_value(PARAM_INT, 'Pending record id'),
             'status' => new external_value(PARAM_TEXT, 'Status value'),
+            'grade' => new external_value(PARAM_INT, 'Grade', VALUE_OPTIONAL),
         ]));
     }
 }
