@@ -106,7 +106,8 @@ export const init = async ({ token, userid, assignmentid, courseid }) => {
              * @returns {boolean} True if rubric was injected successfully
              */
             const injectRubric = () => {
-                if (!rubricResponse) {
+                // Check if rubricResponse is null, undefined, empty string, or 'null' string
+                if (!rubricResponse || rubricResponse === 'null' || rubricResponse === '') {
                     return false;
                 }
 
@@ -237,7 +238,12 @@ export const init = async ({ token, userid, assignmentid, courseid }) => {
              * @returns {boolean} True if grade was injected successfully
              */
             const injectSimpleGrade = () => {
-                if (rubricResponse || !grade) {
+                // Only inject simple grade if there's no rubric data AND grade exists
+                if (rubricResponse && rubricResponse !== 'null' && rubricResponse !== '') {
+                    return false;
+                }
+
+                if (!grade) {
                     return false;
                 }
 

@@ -34,8 +34,7 @@ require_once($CFG->dirroot . '/mod/assign/locallib.php');
  * @copyright  2026 Datacurso
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class submission
-{
+class submission {
     /**
      * Handles the submission created event.
      *
@@ -46,8 +45,7 @@ class submission
      * @param submission_created $event The submission created event.
      * @return void
      */
-    public static function submission_created(submission_created $event)
-    {
+    public static function submission_created(submission_created $event) {
         global $DB;
 
         try {
@@ -91,8 +89,7 @@ class submission
      * @param submission_graded $event The grading event.
      * @return void
      */
-    public static function submission_graded(submission_graded $event)
-    {
+    public static function submission_graded(submission_graded $event) {
         global $DB;
 
         try {
@@ -208,8 +205,7 @@ class submission
      * @param submission_updated $event The submission updated event.
      * @return void
      */
-    public static function submission_updated(submission_updated $event)
-    {
+    public static function submission_updated(submission_updated $event) {
         global $DB;
 
         try {
@@ -242,7 +238,7 @@ class submission
                 'cmid' => (int) $cmid,
             ];
 
-            $delete_from_queue = function () use ($DB, $userid, $cmid) {
+            $deletefromqueue = function () use ($DB, $userid, $cmid) {
                 $like1 = '%"userid":' . $userid . '%';
                 $like2 = '%"userid":"' . $userid . '"%';
 
@@ -253,9 +249,9 @@ class submission
                 $DB->execute($sql, [$like1, $like2]);
             };
 
-            $enqueue_task = function () use ($config, $taskdata, $DB, $delete_from_queue) {
+            $enqueuetask = function () use ($config, $taskdata, $DB, $deletefromqueue) {
 
-                $delete_from_queue();
+                $deletefromqueue();
 
                 if (!empty($config->usedelay)) {
                     $delay = max(1, (int) $config->delayminutes);
@@ -280,7 +276,7 @@ class submission
                 if (!empty($other['oldstatus']) && $other['oldstatus'] === ASSIGN_SUBMISSION_STATUS_NEW) {
                     return;
                 }
-                $enqueue_task();
+                $enqueuetask();
                 return;
             }
 
@@ -290,15 +286,14 @@ class submission
 
             if ($record->status === 'pending') {
                 $DB->delete_records('local_assign_ai_pending', ['id' => $record->id]);
-                $enqueue_task();
+                $enqueuetask();
                 return;
             }
 
             if ($record->status === 'approve') {
-                $enqueue_task();
+                $enqueuetask();
                 return;
             }
-
         } catch (\Exception $e) {
             debugging('Exception in submission_updated observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
@@ -309,8 +304,7 @@ class submission
      * @param submission_status_updated $event The submission status updated event.
      * @return void
      */
-    public static function submission_status_updated(submission_status_updated $event)
-    {
+    public static function submission_status_updated(submission_status_updated $event) {
         global $DB;
 
         try {
@@ -350,7 +344,6 @@ class submission
               AND (payload LIKE ? OR payload LIKE ?)";
 
             $DB->execute($sql, [$like1, $like2]);
-
         } catch (\Exception $e) {
             debugging('Exception in submission_status_updated observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }

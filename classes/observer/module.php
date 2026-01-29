@@ -66,7 +66,6 @@ class module {
             ]);
 
             $DB->delete_records('local_assign_ai_queue');
-
         } catch (\Exception $e) {
             debugging('Exception in course_module_deleted observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
