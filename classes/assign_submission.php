@@ -287,7 +287,7 @@ class assign_submission {
             'cmi_id' => $cmid,
             'assignment_title' => $assignment->name,
             'assignment_description' => $assignment->intro,
-            'rubric' => local_assign_ai_build_rubric_json($this->assign),
+            'rubric' => local_assign_ai_get_advanced_grading_json($this->assign),
             'userid' => $this->user->id,
             'student_name' => fullname($this->user),
             'submission_assign' => self::get_submission_text($this->submission),
