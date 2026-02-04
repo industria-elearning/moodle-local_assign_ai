@@ -20,7 +20,6 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
-require_once($CFG->dirroot . '/local/assign_ai/locallib.php');
 
 use external_api;
 use external_function_parameters;

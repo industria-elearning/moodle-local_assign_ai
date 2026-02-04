@@ -66,8 +66,14 @@ export const init = async ({ token, userid, assignmentid, courseid }) => {
             const rubricResponse = data.rubric_response ?? data.rubric ?? null;
             const guideResponse = data.assessment_guide_response ?? null;
             const grade = data.grade ?? null;
+            const status = data.status ?? 'none';
 
             Log.debug('[local_assign_ai] Data received:', { reference: message, rubricResponse, guideResponse, grade });
+
+            if (status === 'approve') {
+                Log.debug('[local_assign_ai] Skipping injection for approved status.');
+                return;
+            }
 
             let successfulInjection = false;
 

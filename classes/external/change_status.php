@@ -20,12 +20,12 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
-require_once($CFG->dirroot . '/local/assign_ai/locallib.php');
 
 use external_api;
 use external_function_parameters;
 use external_value;
 use external_single_structure;
+use local_assign_ai\grading\feedback_applier;
 
 /**
  * External function to change the status of AI assignment approvals.
@@ -90,7 +90,7 @@ class change_status extends external_api {
             $context = \context_module::instance($cm->id);
             $course = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST);
             $assign = new \assign($context, $cm, $course);
-            local_assign_ai_apply_ai_feedback($assign, $record, $USER->id);
+            feedback_applier::apply_ai_feedback($assign, $record, $USER->id);
         }
 
         return [

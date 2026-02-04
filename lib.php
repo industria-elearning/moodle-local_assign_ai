@@ -24,7 +24,6 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->dirroot . '/local/assign_ai/locallib.php');
 
 /**
  * Extends assignment navigation to display the "AI Review" button.
@@ -98,7 +97,7 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
     }
 
     $assignid = $formwrapper->get_current()->instance ?? 0;
-    $config = $assignid ? local_assign_ai_get_assignment_config($assignid) : null;
+    $config = $assignid ? \local_assign_ai\config\assignment_config::get($assignid) : null;
 
     $autograde = $config->autograde ?? 0;
     $graderdefault = $config->graderid ?? null;

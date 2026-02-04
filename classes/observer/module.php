@@ -20,7 +20,6 @@ defined('MOODLE_INTERNAL') || die();
 
 use core\event\course_module_deleted;
 
-require_once($CFG->dirroot . '/local/assign_ai/locallib.php');
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
 
 /**

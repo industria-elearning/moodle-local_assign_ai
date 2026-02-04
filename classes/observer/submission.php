@@ -23,8 +23,9 @@ use mod_assign\event\submission_updated;
 use mod_assign\event\submission_status_updated;
 use mod_assign\event\submission_graded;
 use local_assign_ai\task\process_submission_ai;
+use local_assign_ai\config\assignment_config;
+use local_assign_ai\pending\manager as pending_manager;
 
-require_once($CFG->dirroot . '/local/assign_ai/locallib.php');
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
 
 /**
@@ -103,7 +104,7 @@ class submission {
             $submission = $assign->get_user_submission($userid, true);
             $cmid = $assign->get_course_module()->id;
 
-            $config = local_assign_ai_get_assignment_config($assign->get_instance()->id);
+            $config = assignment_config::get($assign->get_instance()->id);
 
             $records = $DB->get_records('local_assign_ai_pending', [
                 'assignmentid' => $cmid,
@@ -177,6 +178,57 @@ class submission {
             debugging('Exception in submission_updated observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
     }
+
+    /**
+     * Syncs approved AI records when a teacher updates grading.
+     *
+     * @param submission_graded $event The submission graded event.
+     * @return void
+     */
+    public static function submission_graded(submission_graded $event) {
+        global $DB, $USER;
+
+        try {
+            $assign = $event->get_assign();
+            if (!$assign) {
+                return;
+            }
+
+            $data = $event->get_data();
+            $userid = $data['relateduserid'] ?? null;
+            if (!$userid) {
+                return;
+            }
+
+            $cmid = $assign->get_course_module()->id;
+            $record = pending_manager::get_latest_record($cmid, $userid);
+
+            if (!$record) {
+                return;
+            }
+
+            if ($record->status !== \local_assign_ai\assign_submission::STATUS_APPROVED) {
+                return;
+            }
+
+            $grade = $assign->get_user_grade($userid, true);
+            if (!$grade) {
+                return;
+            }
+
+            $gradingmanager = get_grading_manager($assign->get_context(), 'mod_assign', 'submissions');
+            pending_manager::sync_after_grading(
+                $assign,
+                $record,
+                $grade,
+                $gradingmanager,
+                $USER->id ?? $record->usermodified
+            );
+        } catch (\Exception $e) {
+            debugging('Exception in submission_graded observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
+    }
+
     /**
      * Handles the submission_status_updated event when a student removes their submission.
      *

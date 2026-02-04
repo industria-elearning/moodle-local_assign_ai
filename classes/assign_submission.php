@@ -17,6 +17,9 @@
 namespace local_assign_ai;
 
 use local_assign_ai\api\client;
+use local_assign_ai\config\assignment_config;
+use local_assign_ai\grading\advanced_grading;
+use local_assign_ai\grading\feedback_applier;
 use stdClass;
 
 /**
@@ -94,7 +97,7 @@ class assign_submission {
         $assignment = $this->assigninstance;
         $cmid = $this->assign->get_course_module()->id;
 
-        if (!local_assign_ai_is_autograde_enabled($this->assign)) {
+        if (!assignment_config::is_autograde_enabled($this->assign)) {
             // Autograde disabled: create a basic pending record for teacher review later.
             $record = (object) [
                 'courseid' => $this->course->id,
@@ -149,9 +152,9 @@ class assign_submission {
         $recordid = self::create_pending_submission($record);
 
         $record = $DB->get_record('local_assign_ai_pending', ['id' => $recordid]);
-        $config = local_assign_ai_get_assignment_config($this->assigninstance->id);
+        $config = assignment_config::get($this->assigninstance->id);
         if ($record && !empty($config) && !empty($config->graderid)) {
-            local_assign_ai_apply_ai_feedback($this->assign, $record, $config->graderid);
+            feedback_applier::apply_ai_feedback($this->assign, $record, $config->graderid);
         }
     }
 
@@ -319,7 +322,7 @@ class assign_submission {
         $assignment = $this->assigninstance;
         $cmid = $this->assign->get_course_module()->id;
 
-        $advancedgrading = local_assign_ai_get_advanced_grading_json($this->assign);
+        $advancedgrading = advanced_grading::get_definition_json($this->assign);
         $rubric = null;
         $assessmentguide = null;
 
