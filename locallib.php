@@ -31,7 +31,7 @@ require_once($CFG->dirroot . '/mod/assign/locallib.php');
  * Converts the assignment advanced grading (rubric or guide) into simplified JSON.
  *
  * @param assign $assign The assignment instance.
- * @return array|null Simplified grading array or null if no advanced grading is active.
+ * @return array|null An array containing the method and the formatted data, or null if not active.
  */
 function local_assign_ai_get_advanced_grading_json(assign $assign) {
     global $DB;
@@ -54,18 +54,17 @@ function local_assign_ai_get_advanced_grading_json(assign $assign) {
         return null;
     }
 
-    $gradingdata = [
-        'method' => $method,
-        'title' => $definition->name ?? '',
-        'description' => $definition->description ?? '',
-        'criteria' => [],
-    ];
-
     if ($method === 'rubric' && !empty($definition->rubric_criteria)) {
+        $data = [
+            'title' => $definition->name ?? '',
+            'description' => $definition->description ?? '',
+            'criteria' => [],
+        ];
+
         foreach ($definition->rubric_criteria as $criterionid => $criterion) {
             $crit = [
                 'id' => $criterionid,
-                'description' => $criterion['description'],
+                'criterion' => $criterion['description'],
                 'levels' => [],
             ];
 
@@ -76,23 +75,36 @@ function local_assign_ai_get_advanced_grading_json(assign $assign) {
                     'description' => $level['definition'],
                 ];
             }
-            $gradingdata['criteria'][] = $crit;
+            $data['criteria'][] = $crit;
         }
+        return ['method' => 'rubric', 'data' => $data];
     } else if ($method === 'guide' && !empty($definition->guide_criteria)) {
+        $data = [
+            'title' => $definition->name ?? '',
+            'description' => $definition->description ?? '',
+            'criteria' => [],
+            'predefined_comments' => [],
+        ];
+
         foreach ($definition->guide_criteria as $criterionid => $criterion) {
-            $gradingdata['criteria'][] = [
+            $data['criteria'][] = [
                 'id' => $criterionid,
-                'shortname' => $criterion['shortname'],
-                'description' => $criterion['description'],
-                'descriptionmarkers' => $criterion['descriptionmarkers'],
-                'maxscore' => (float) $criterion['maxscore'],
+                'criterion' => $criterion['shortname'],
+                'description_students' => $criterion['descriptionmarkers'],
+                'description_evaluators' => $criterion['description'],
+                'maximum_score' => (float) $criterion['maxscore'],
             ];
         }
-    } else {
-        return null;
+
+        if (!empty($definition->guide_comments)) {
+            foreach ($definition->guide_comments as $comment) {
+                $data['predefined_comments'][] = $comment['description'];
+            }
+        }
+        return ['method' => 'guide', 'data' => $data];
     }
 
-    return $gradingdata;
+    return null;
 }
 
 /**
@@ -142,8 +154,13 @@ function local_assign_ai_is_autograde_enabled(assign $assign): bool {
 function local_assign_ai_apply_ai_feedback(assign $assign, stdClass $record, int $graderid): void {
     global $DB;
 
+    $debugmsg = '';
+    $debugmsg .= "local_assign_ai_apply_ai_feedback: inicio.\n";
+
     $grade = $assign->get_user_grade($record->userid, true);
     if (!$grade) {
+        $debugmsg .= "No grade para userid={$record->userid}.\n";
+        debugging($debugmsg, DEBUG_DEVELOPER);
         debugging("No grade exists for userid={$record->userid}.", DEBUG_DEVELOPER);
         return;
     }
@@ -152,19 +169,34 @@ function local_assign_ai_apply_ai_feedback(assign $assign, stdClass $record, int
     $gradingmanager = get_grading_manager($assign->get_context(), 'mod_assign', 'submissions');
     $method = $gradingmanager->get_active_method();
 
+    $debugmsg .= "Metodo activo: {$method}.\n";
+    $debugmsg .= "rubric_response presente: " . (!empty($record->rubric_response) ? 'si' : 'no') . ".\n";
+    $debugmsg .= "assessment_guide_response presente: " . (!empty($record->assessment_guide_response) ? 'si' : 'no') . ".\n";
+
     if ($method === 'rubric' && !empty($record->rubric_response)) {
+        $debugmsg .= "Ruta rubric seleccionada.\n";
         $gradepushed = local_assign_ai_apply_rubric_grading($assign, $grade, $record, $graderid, $gradingmanager);
-    } else if ($method === 'guide' && !empty($record->rubric_response)) {
+        $debugmsg .= "Resultado rubric: " . ($gradepushed ? 'ok' : 'fallo') . ".\n";
+    } else if ($method === 'guide' && !empty($record->assessment_guide_response)) {
+        $debugmsg .= "Ruta guide seleccionada.\n";
         $gradepushed = local_assign_ai_apply_guide_grading($assign, $grade, $record, $graderid, $gradingmanager);
+        $debugmsg .= "Resultado guide: " . ($gradepushed ? 'ok' : 'fallo') . ".\n";
+    } else {
+        $debugmsg .= "No se selecciono ruta avanzada.\n";
     }
 
     // Default to simple grading if no advanced grading was successful or used.
     if (!$gradepushed) {
+        $debugmsg .= "Aplicando calificacion simple.\n";
         $gradepushed = local_assign_ai_apply_simple_grading($assign, $grade, $record, $graderid);
+        $debugmsg .= "Resultado simple: " . ($gradepushed ? 'ok' : 'fallo') . ".\n";
     }
 
     // Always save feedback comments regardless of the grading method.
     local_assign_ai_save_feedback_comments($assign, $grade, $record->message);
+
+    $debugmsg .= "Fin apply_ai_feedback.\n";
+    debugging($debugmsg, DEBUG_DEVELOPER);
 
     // Trigger event if not already pushed (though update_grade usually triggers it).
     if (!$gradepushed) {
@@ -262,15 +294,24 @@ function local_assign_ai_apply_rubric_grading($assign, $grade, $record, $graderi
  */
 function local_assign_ai_apply_guide_grading($assign, $grade, $record, $graderid, $gradingmanager) {
     global $DB;
+
+    $debugmsg = '';
+    $debugmsg .= "local_assign_ai_apply_guide_grading: inicio.\n";
+    $debugmsg .= "assessment_guide_response length: " . (isset($record->assessment_guide_response) ? strlen((string)$record->assessment_guide_response) : 0) . ".\n";
     $controller = $gradingmanager->get_controller('guide');
 
     $grademenu = local_assign_ai_get_grade_menu($assign);
     $controller->set_grade_range($grademenu, $controller->get_allow_grade_decimals());
 
     $definition = $controller->get_definition();
-    $guidedata = json_decode($record->rubric_response, true);
+    $guidedata = json_decode($record->assessment_guide_response, true);
 
     if (!$definition || empty($guidedata) || !is_array($guidedata)) {
+        $debugmsg .= "Guide sin definicion o guidata invalida.\n";
+        $debugmsg .= "definition: " . (!empty($definition) ? 'ok' : 'null') . ".\n";
+        $debugmsg .= "guidedata tipo: " . gettype($guidedata) . ".\n";
+        $debugmsg .= "guidedata empty: " . (empty($guidedata) ? 'si' : 'no') . ".\n";
+        debugging($debugmsg, DEBUG_DEVELOPER);
         return false;
     }
 
@@ -278,25 +319,64 @@ function local_assign_ai_apply_guide_grading($assign, $grade, $record, $graderid
     $fillingdata = ['criteria' => []];
     $moodlecriteria = $definition->guide_criteria;
 
-    foreach ($guidedata as $item) {
-        $aicriterion = trim(strip_tags($item['criterion'] ?? ''));
-        if ($aicriterion === '') {
-            continue;
-        }
-
+    $debugmsg .= "Total criterios Moodle: " . (is_array($moodlecriteria) ? count($moodlecriteria) : 0) . ".\n";
+    if (is_array($moodlecriteria)) {
+        $i = 0;
         foreach ($moodlecriteria as $id => $criterion) {
-            $moodlecriterion = trim(strip_tags($criterion['shortname']));
-            if ($moodlecriterion === $aicriterion) {
-                $fillingdata['criteria'][$id] = [
-                    'score' => (float) ($item['score'] ?? 0),
-                    'remark' => $item['comment'] ?? '',
-                ];
+            $shortname = trim(strip_tags($criterion['shortname'] ?? ''));
+            $debugmsg .= "Moodle criterio[$id]: {$shortname}.\n";
+            $i++;
+            if ($i >= 20) {
+                $debugmsg .= "(Lista de criterios Moodle truncada a 20)\n";
                 break;
             }
         }
     }
 
+    $debugmsg .= "Guidedata keys: " . implode(', ', array_keys($guidedata)) . ".\n";
+
+    // Guidedata is keyed by criterion name: "Criterion A" => ["grade" => 10, "reply" => ["Good", "Comments"]].
+    foreach ($guidedata as $aicriterionname => $item) {
+        $aicriterionclean = trim(strip_tags($aicriterionname));
+        $debugmsg .= "Procesando criterio AI: {$aicriterionclean}.\n";
+        $debugmsg .= "Item AI keys: " . (is_array($item) ? implode(', ', array_keys($item)) : gettype($item)) . ".\n";
+        $matched = false;
+
+        // Find matching Moodle criterion.
+        foreach ($moodlecriteria as $id => $criterion) {
+            $moodlecriterionclean = trim(strip_tags($criterion['shortname']));
+
+            if (strcasecmp($moodlecriterionclean, $aicriterionclean) === 0) {
+                $matched = true;
+                $score = (float)($item['grade'] ?? 0);
+
+                $remark = '';
+                if (!empty($item['reply'])) {
+                    if (is_array($item['reply'])) {
+                        $remark = implode(', ', $item['reply']);
+                    } else {
+                        $remark = (string)$item['reply'];
+                    }
+                }
+
+                $fillingdata['criteria'][$id] = [
+                    'score' => $score,
+                    'remark' => $remark,
+                    'remarkformat' => FORMAT_HTML,
+                ];
+                $debugmsg .= "Match criterio: {$moodlecriterionclean}. score={$score}.\n";
+                break;
+            }
+        }
+
+        if (!$matched) {
+            $debugmsg .= "Sin match para criterio AI: {$aicriterionclean}.\n";
+        }
+    }
+
     if (empty($fillingdata['criteria'])) {
+        $debugmsg .= "Sin criterios para enviar.\n";
+        debugging($debugmsg, DEBUG_DEVELOPER);
         return false;
     }
 
@@ -304,8 +384,12 @@ function local_assign_ai_apply_guide_grading($assign, $grade, $record, $graderid
         $grade->grade = $instance->submit_and_get_grade($fillingdata, $grade->id);
         $grade->grader = $graderid;
         local_assign_ai_advance_marking_workflow($assign, $record->userid);
+        $debugmsg .= "Guide submit OK.\n";
+        debugging($debugmsg, DEBUG_DEVELOPER);
         return $assign->update_grade($grade);
     } catch (\Exception $e) {
+        $debugmsg .= "Guide exception: " . $e->getMessage() . "\n";
+        debugging($debugmsg, DEBUG_DEVELOPER);
         debugging("local_assign_ai: Guide error: " . $e->getMessage(), DEBUG_DEVELOPER);
         return false;
     }

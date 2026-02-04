@@ -14,11 +14,33 @@
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 /**
- * Insert comments, rubric, guide, and AI-generated rating into the task evaluation form.
+ * Injects a simple numeric grade.
  *
- * @module      local_assign_ai/inject_ai
+ * @module      local_assign_ai/inject_ai/inject_simple_grade
  * @copyright   2025 Datacurso
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-export { init } from './inject_ai/init';
+/**
+ * Injects simple numeric grade.
+ *
+ * @param {number|string} grade The grade to inject.
+ * @returns {boolean} True if grade was injected successfully
+ */
+export const injectSimpleGrade = (grade) => {
+    if (grade === null || grade === undefined) {
+        return false;
+    }
+
+    const input = document.querySelector('#id_grade, input[name="grade"]');
+    if (!input) {
+        return false;
+    }
+
+    if (input.value != grade) {
+        input.value = grade;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    return true;
+};

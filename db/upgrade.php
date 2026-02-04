@@ -251,5 +251,16 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025120505, 'local', 'assign_ai');
     }
 
+    if ($oldversion < 2025120803) {
+        $table = new xmldb_table('local_assign_ai_pending');
+        $field = new xmldb_field('assessment_guide_response', XMLDB_TYPE_TEXT, null, null, null, null, null, 'rubric_response');
+
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2025120803, 'local', 'assign_ai');
+    }
+
     return true;
 }
