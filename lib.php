@@ -24,7 +24,6 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->dirroot . '/local/assign_ai/locallib.php');
 
 /**
  * Extends assignment navigation to display the "AI Review" button.
@@ -127,8 +126,13 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
         }
     }
 
-    $defaultautograde = $config->autograde ?? 0;
+    $assignid = $formwrapper->get_current()->instance ?? 0;
+    $config = $assignid ? \local_assign_ai\config\assignment_config::get($assignid) : null;
+
+    $autograde = $config->autograde ?? 0;
     $graderdefault = $config->graderid ?? null;
+    $usedelay = $config->usedelay ?? 0;
+    $delayminutes = max(1, (int)($config->delayminutes ?? 60));
 
     $mform->addElement(
         'header',
@@ -143,7 +147,35 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
         [0 => get_string('no'), 1 => get_string('yes')]
     );
     $mform->addHelpButton('local_assign_ai_autograde', 'autograde', 'local_assign_ai');
-    $mform->setDefault('local_assign_ai_autograde', $defaultautograde);
+
+    $mform->setDefault('local_assign_ai_autograde', $autograde);
+
+    // Use delay.
+    $mform->addElement(
+        'select',
+        'local_assign_ai_usedelay',
+        get_string('usedelay', 'local_assign_ai'),
+        [0 => get_string('no'), 1 => get_string('yes')]
+    );
+    $mform->addHelpButton('local_assign_ai_usedelay', 'usedelay', 'local_assign_ai');
+    $mform->setDefault('local_assign_ai_usedelay', $usedelay);
+
+    // Delay minutes.
+    $mform->addElement(
+        'text',
+        'local_assign_ai_delayminutes',
+        get_string('delayminutes', 'local_assign_ai')
+    );
+    $mform->setType('local_assign_ai_delayminutes', PARAM_INT);
+    $mform->addRule('local_assign_ai_delayminutes', null, 'numeric', null, 'client');
+    $mform->addHelpButton('local_assign_ai_delayminutes', 'delayminutes', 'local_assign_ai');
+    $mform->setDefault('local_assign_ai_delayminutes', $delayminutes);
+
+    $mform->hideIf('local_assign_ai_usedelay', 'local_assign_ai_autograde', 'neq', 1);
+    $mform->hideIf('local_assign_ai_delayminutes', 'local_assign_ai_autograde', 'neq', 1);
+    $mform->hideIf('local_assign_ai_grader', 'local_assign_ai_autograde', 'neq', 1);
+
+    $mform->hideIf('local_assign_ai_delayminutes', 'local_assign_ai_usedelay', 'neq', 1);
 
     // Eligible graders.
     $eligibleusers = get_enrolled_users($context, 'mod/assign:grade');
@@ -176,6 +208,7 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
         $options,
         [
             'multiple' => false,
+            'tags' => false,
             'maxitems' => 1,
             'noselectionstring' => get_string('none'),
         ]
@@ -247,10 +280,22 @@ function local_assign_ai_coursemodule_edit_post_actions($data, $course) {
         $graderid = !empty($value) ? (int)$value : null;
     }
 
+    $autograde = empty($data->local_assign_ai_autograde) ? 0 : 1;
+    $usedelay = empty($data->local_assign_ai_usedelay) ? 0 : 1;
+    $delayminutes = max(1, (int)($data->local_assign_ai_delayminutes ?? 60));
+
+    if (!$autograde) {
+        $usedelay = 0;
+        $delayminutes = 0;
+        $graderid = null;
+    }
+
     $config = (object)[
         'assignmentid' => $data->instance,
         'tenantid' => $tenantid,
         'autograde' => empty($data->local_assign_ai_autograde) ? 0 : 1,
+        'usedelay' => $usedelay,
+        'delayminutes' => $delayminutes,
         'graderid' => $graderid,
         'timemodified' => time(),
         'usermodified' => $USER->id ?? null,

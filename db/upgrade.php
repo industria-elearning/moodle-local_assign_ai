@@ -245,5 +245,92 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025120504, 'local', 'assign_ai');
     }
 
+    if ($oldversion < 2025120504) {
+        // Define field usedelay to be added to local_assign_ai_config.
+        $table = new xmldb_table('local_assign_ai_config');
+        $field = new xmldb_field('usedelay', XMLDB_TYPE_INTEGER, '1', null, null, null, '0', 'usermodified');
+
+        // Conditionally launch add field usedelay.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Assign_ai savepoint reached.
+        upgrade_plugin_savepoint(true, 2025120504, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2025120505) {
+        // Define field delayminutes to be added to local_assign_ai_config.
+        $table = new xmldb_table('local_assign_ai_config');
+        $field = new xmldb_field('delayminutes', XMLDB_TYPE_INTEGER, '6', null, null, null, '0', 'usedelay');
+
+        // Conditionally launch add field delayminutes.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Assign_ai savepoint reached.
+        upgrade_plugin_savepoint(true, 2025120505, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2025120803) {
+        $table = new xmldb_table('local_assign_ai_pending');
+        $field = new xmldb_field('assessment_guide_response', XMLDB_TYPE_TEXT, null, null, null, null, null, 'rubric_response');
+
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2025120803, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2026010804) {
+        // Define table local_assign_ai_queue to be created.
+        $table = new xmldb_table('local_assign_ai_queue');
+
+        // Adding fields to table local_assign_ai_queue.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('type', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('payload', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timetoprocess', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('processed', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+
+        // Adding keys to table local_assign_ai_queue.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+
+        // Conditionally launch create table for local_assign_ai_queue.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Assign_ai savepoint reached.
+        upgrade_plugin_savepoint(true, 2026010804, 'local', 'assign_ai');
+    }
+
+    if ($oldversion < 2026010805) {
+        $table = new xmldb_table('local_assign_ai_config');
+        $field = new xmldb_field('usedelay', XMLDB_TYPE_INTEGER, '1', null, null, null, '0', 'usermodified');
+
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $field = new xmldb_field('delayminutes', XMLDB_TYPE_INTEGER, '6', null, null, null, '0', 'usedelay');
+
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $table = new xmldb_table('local_assign_ai_pending');
+        $field = new xmldb_field('assessment_guide_response', XMLDB_TYPE_TEXT, null, null, null, null, null, 'rubric_response');
+
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2026010805, 'local', 'assign_ai');
+    }
+
     return true;
 }

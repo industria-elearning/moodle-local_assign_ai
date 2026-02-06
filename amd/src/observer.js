@@ -36,32 +36,69 @@ import Config from 'core/config';
 export const init = async () => {
 
     const params = new URLSearchParams(window.location.search);
-    const userid = parseInt(params.get('userid'));
     const assignmentid = parseInt(params.get('id'));
     const courseid = Config.courseId || Config.courseid;
 
-    if (!userid || !assignmentid || !courseid) {
+    if (!assignmentid || !courseid) {
         return;
     }
 
-    try {
-        const response = await Ajax.call([{
-            methodname: 'local_assign_ai_get_token',
-            args: { userid, assignmentid }
-        }])[0];
+    // Function to attempt initialization
+    const tryInit = async () => {
+        const currentParams = new URLSearchParams(window.location.search);
+        let userid = parseInt(currentParams.get('userid'));
 
-        if (!response?.approval_token) {
-            return;
+        // Fallback: Try to find userid from the DOM if not in URL
+        if (!userid) {
+            // Try Common Moodle Grader selectors
+            const userLink = document.querySelector('[data-region="user-info"] a[href*="user/view.php"]');
+            if (userLink) {
+                const url = new URL(userLink.href);
+                userid = parseInt(url.searchParams.get('id'));
+            } else {
+                const input = document.querySelector('input[name="userid"]');
+                if (input) {
+                    userid = parseInt(input.value);
+                }
+            }
         }
 
-        InjectAI.init({
-            token: response.approval_token,
-            userid,
-            assignmentid,
-            courseid
-        });
+        if (userid) {
+            try {
+                const response = await Ajax.call([{
+                    methodname: 'local_assign_ai_get_token',
+                    args: { userid, assignmentid }
+                }])[0];
 
-    } catch (err) {
-        Notification.exception(err);
+                if (response?.approval_token) {
+                    InjectAI.init({
+                        token: response.approval_token,
+                        userid,
+                        assignmentid,
+                        courseid
+                    });
+                    return true; // Success
+                }
+            } catch (err) {
+                Notification.exception(err);
+                return true; // Stop polling on error
+            }
+        }
+        return false; // Not ready yet
+    };
+
+    // Attempt immediately
+    if (await tryInit()) {
+        return;
     }
+
+    // Retry via polling if userid wasn't found immediately (e.g. first load)
+    let attempts = 0;
+    const maxAttempts = 20; // Wait up to ~10s
+    const interval = setInterval(async () => {
+        attempts++;
+        if (await tryInit() || attempts >= maxAttempts) {
+            clearInterval(interval);
+        }
+    }, 500);
 };

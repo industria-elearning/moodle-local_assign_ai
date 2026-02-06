@@ -106,6 +106,7 @@ class get_details extends external_api {
             'userid' => $record->userid,
             'grade' => $record->grade,
             'rubric_response' => $record->rubric_response,
+            'assessment_guide_response' => $record->assessment_guide_response,
         ];
     }
 
@@ -121,6 +122,7 @@ class get_details extends external_api {
             'userid' => new external_value(PARAM_INT, 'User ID'),
             'grade' => new external_value(PARAM_FLOAT, 'AI suggested grade', VALUE_OPTIONAL),
             'rubric_response' => new external_value(PARAM_RAW, 'AI rubric response JSON', VALUE_OPTIONAL),
+            'assessment_guide_response' => new external_value(PARAM_RAW, 'AI guide response JSON', VALUE_OPTIONAL),
         ]);
     }
 }
