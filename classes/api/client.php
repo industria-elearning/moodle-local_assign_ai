@@ -41,9 +41,10 @@ class client {
         $response = $client->request('POST', '/assign/answer', $payload);
 
         return [
-        'reply'  => $response['reply'],
-        'grade'  => $response['grade'],
-        'rubric' => $response['rubric'],
+            'reply' => $response['reply'],
+            'grade' => $response['grade'],
+            'rubric' => $response['rubric'] ?? null,
+            'assessment_guide' => $response['assessment_guide'] ?? null,
         ];
     }
 }

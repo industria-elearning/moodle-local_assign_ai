@@ -20,12 +20,12 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
-require_once($CFG->dirroot . '/local/assign_ai/locallib.php');
 
 use external_api;
 use external_function_parameters;
 use external_value;
 use external_single_structure;
+use local_assign_ai\grading\feedback_applier;
 
 /**
  * External function to approve all pending AI feedback for an assignment.
@@ -86,7 +86,7 @@ class approve_all_pending extends external_api {
             $DB->update_record('local_assign_ai_pending', $record);
 
             // Apply feedback on approve.
-            local_assign_ai_apply_ai_feedback($assign, $record, $USER->id);
+            feedback_applier::apply_ai_feedback($assign, $record, $USER->id);
             $approved++;
         }
 

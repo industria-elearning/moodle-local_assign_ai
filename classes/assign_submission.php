@@ -17,13 +17,16 @@
 namespace local_assign_ai;
 
 use local_assign_ai\api\client;
+use local_assign_ai\config\assignment_config;
+use local_assign_ai\grading\advanced_grading;
+use local_assign_ai\grading\feedback_applier;
 use stdClass;
 
 /**
  * Class assign_submission
  *
  * @package    local_assign_ai
- * @copyright  2025 Wilber Narvaez <https://datacurso.com>
+ * @copyright  2025 Datacurso
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class assign_submission {
@@ -36,7 +39,7 @@ class assign_submission {
     /** Processing status when ad-hoc task is handling the record. */
     public const STATUS_PROCESSING = 'processing';
     /** Approved status after human review or AI grading. */
-    public const STATUS_APPROVED = 'approved';
+    public const STATUS_APPROVED = 'approve';
     /** Rejected status after human review. */
     public const STATUS_REJECTED = 'rejected';
 
@@ -94,7 +97,7 @@ class assign_submission {
         $assignment = $this->assigninstance;
         $cmid = $this->assign->get_course_module()->id;
 
-        if (!local_assign_ai_is_autograde_enabled($this->assign)) {
+        if (!assignment_config::is_autograde_enabled($this->assign)) {
             // Autograde disabled: create a basic pending record for teacher review later.
             $record = (object) [
                 'courseid' => $this->course->id,
@@ -115,7 +118,25 @@ class assign_submission {
 
         $message = $response['reply'] ?? null;
         $grade = isset($response['grade']) ? (is_numeric($response['grade']) ? (float) $response['grade'] : null) : null;
-        $rubricresponse = json_encode($response['rubric'], JSON_UNESCAPED_UNICODE) ?? null;
+
+        // Determine correct advanced grading response (rubric or assessment_guide).
+        $rawadvanced = !empty($response['rubric']) ? $response['rubric'] : ($response['assessment_guide'] ?? null);
+        $rubricresponse = null;
+        $assessmentguideresponse = null;
+
+        if ($rawadvanced) {
+            $advanceddata = $rawadvanced;
+            if (is_array($rawadvanced) && isset($rawadvanced['criteria'])) {
+                $advanceddata = $rawadvanced['criteria'];
+            }
+            $jsonresponse = json_encode($advanceddata, JSON_UNESCAPED_UNICODE);
+
+            if (!empty($response['rubric'])) {
+                $rubricresponse = $jsonresponse;
+            } else {
+                $assessmentguideresponse = $jsonresponse;
+            }
+        }
 
         $record = (object) [
             'courseid' => $this->course->id,
@@ -125,14 +146,15 @@ class assign_submission {
             'message' => $message,
             'grade' => $grade !== null ? (int) round($grade) : null,
             'rubric_response' => $rubricresponse,
+            'assessment_guide_response' => $assessmentguideresponse,
             'status' => self::STATUS_APPROVED,
         ];
         $recordid = self::create_pending_submission($record);
 
         $record = $DB->get_record('local_assign_ai_pending', ['id' => $recordid]);
-        $config = local_assign_ai_get_assignment_config($this->assigninstance->id);
+        $config = assignment_config::get($this->assigninstance->id);
         if ($record && !empty($config) && !empty($config->graderid)) {
-            local_assign_ai_apply_ai_feedback($this->assign, $record, $config->graderid);
+            feedback_applier::apply_ai_feedback($this->assign, $record, $config->graderid);
         }
     }
 
@@ -166,12 +188,31 @@ class assign_submission {
 
         $message = $response['reply'] ?? null;
         $grade = isset($response['grade']) ? (is_numeric($response['grade']) ? (float) $response['grade'] : null) : null;
-        $rubricresponse = json_encode($response['rubric'], JSON_UNESCAPED_UNICODE) ?? null;
+
+        // Determine correct advanced grading response (rubric or assessment_guide).
+        $rawadvanced = !empty($response['rubric']) ? $response['rubric'] : ($response['assessment_guide'] ?? null);
+        $rubricresponse = null;
+        $assessmentguideresponse = null;
+
+        if ($rawadvanced) {
+            $advanceddata = $rawadvanced;
+            if (is_array($rawadvanced) && isset($rawadvanced['criteria'])) {
+                $advanceddata = $rawadvanced['criteria'];
+            }
+            $jsonresponse = json_encode($advanceddata, JSON_UNESCAPED_UNICODE);
+
+            if (!empty($response['rubric'])) {
+                $rubricresponse = $jsonresponse;
+            } else {
+                $assessmentguideresponse = $jsonresponse;
+            }
+        }
 
         $data = [
             'message' => $message,
             'grade' => $grade !== null ? (int) round($grade) : null,
             'rubric_response' => $rubricresponse,
+            'assessment_guide_response' => $assessmentguideresponse,
             'status' => self::STATUS_PENDING,
         ];
         self::update_pending_submission($existing->id, $data);
@@ -280,6 +321,19 @@ class assign_submission {
         $course = $this->assign->get_course();
         $assignment = $this->assigninstance;
         $cmid = $this->assign->get_course_module()->id;
+
+        $advancedgrading = advanced_grading::get_definition_json($this->assign);
+        $rubric = null;
+        $assessmentguide = null;
+
+        if ($advancedgrading) {
+            if ($advancedgrading['method'] === 'rubric') {
+                $rubric = $advancedgrading['data'];
+            } else if ($advancedgrading['method'] === 'guide') {
+                $assessmentguide = $advancedgrading['data'];
+            }
+        }
+
         return [
             'course_id' => $course->id,
             'course' => $course->fullname,
@@ -287,7 +341,8 @@ class assign_submission {
             'cmi_id' => $cmid,
             'assignment_title' => $assignment->name,
             'assignment_description' => $assignment->intro,
-            'rubric' => local_assign_ai_build_rubric_json($this->assign),
+            'rubric' => $rubric,
+            'assessment_guide' => $assessmentguide,
             'userid' => $this->user->id,
             'student_name' => fullname($this->user),
             'submission_assign' => self::get_submission_text($this->submission),

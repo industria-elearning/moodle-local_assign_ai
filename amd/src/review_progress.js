@@ -23,7 +23,7 @@
  */
 import Ajax from 'core/ajax';
 import Notification from 'core/notification';
-import {get_string as getString} from 'core/str';
+import { get_string as getString } from 'core/str';
 
 const POLL_MS_DEFAULT = 8000;
 let intervalid = 0;
@@ -64,6 +64,30 @@ function hasPendingRows() {
 }
 
 /**
+ * Apply a grade value (if present) to the grade cell in the given row.
+ *
+ * @param {HTMLElement} row
+ * @param {number|null|undefined} grade
+ */
+function applyGradeToRow(row, grade) {
+    if (!row) {
+        return;
+    }
+
+    const gradeCell = row.querySelector('.js-grade-cell');
+    if (!gradeCell) {
+        return;
+    }
+
+    if (typeof grade !== 'undefined' && grade !== null) {
+        const rounded = Math.round(grade);
+        gradeCell.textContent = String(rounded);
+    } else {
+        gradeCell.textContent = '-';
+    }
+}
+
+/**
  * Disable/enable the header buttons depending on current progress state.
  */
 function reflectHeaderButtonsState() {
@@ -91,7 +115,7 @@ function reflectHeaderButtonsState() {
  * @param {number} progress
  * @param {string} status
  */
-function updateRow(row, progress, status) {
+function updateRow(row, progress, status, grade) {
     const badge = row.querySelector('.js-state-badge');
     const hint = row.querySelector('.js-state-hint');
     let indicator = row.querySelector('.js-progress-indicator');
@@ -109,7 +133,7 @@ function updateRow(row, progress, status) {
         }
         getString('processing', 'local_assign_ai').then(txt => {
             indicator.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>' + txt + ' (' + progress + '%)';
-        }).catch(() => {});
+        }).catch(() => { });
 
         // Disable row action buttons while in progress.
         row.querySelectorAll('button').forEach(b => b.setAttribute('disabled', 'disabled'));
@@ -140,20 +164,20 @@ function updateRow(row, progress, status) {
         // Update badge class and short text per status, and the longer hint below.
         if (status === 'initial') {
             badge.className = 'badge bg-secondary js-state-badge';
-            getString('aistatus_initial_short', 'local_assign_ai').then(t => { badge.textContent = t; }).catch(() => {});
-            getString('aistatus_initial_help', 'local_assign_ai').then(t => { hint.textContent = t; }).catch(() => {});
+            getString('aistatus_initial_short', 'local_assign_ai').then(t => { badge.textContent = t; }).catch(() => { });
+            getString('aistatus_initial_help', 'local_assign_ai').then(t => { hint.textContent = t; }).catch(() => { });
         } else if (status === 'queued') {
             badge.className = 'badge bg-warning js-state-badge';
-            getString('aistatus_queued_short', 'local_assign_ai').then(t => { badge.textContent = t; }).catch(() => {});
-            getString('aistatus_queued_help', 'local_assign_ai').then(t => { hint.textContent = t; }).catch(() => {});
+            getString('aistatus_queued_short', 'local_assign_ai').then(t => { badge.textContent = t; }).catch(() => { });
+            getString('aistatus_queued_help', 'local_assign_ai').then(t => { hint.textContent = t; }).catch(() => { });
         } else if (status === 'processing') {
             badge.className = 'badge bg-warning js-state-badge';
-            getString('processing', 'local_assign_ai').then(t => { badge.textContent = t; }).catch(() => {});
-            getString('aistatus_processing_help', 'local_assign_ai').then(t => { hint.textContent = t; }).catch(() => {});
+            getString('processing', 'local_assign_ai').then(t => { badge.textContent = t; }).catch(() => { });
+            getString('aistatus_processing_help', 'local_assign_ai').then(t => { hint.textContent = t; }).catch(() => { });
         } else if (status === 'pending') {
             badge.className = 'badge bg-info js-state-badge';
-            getString('aistatus_pending_short', 'local_assign_ai').then(t => { badge.textContent = t; }).catch(() => {});
-            getString('aistatus_pending_help', 'local_assign_ai').then(t => { hint.textContent = t; }).catch(() => {});
+            getString('aistatus_pending_short', 'local_assign_ai').then(t => { badge.textContent = t; }).catch(() => { });
+            getString('aistatus_pending_help', 'local_assign_ai').then(t => { hint.textContent = t; }).catch(() => { });
         }
     }
 
@@ -166,6 +190,11 @@ function updateRow(row, progress, status) {
             btnDetails.classList.add('d-none');
             btnReview.classList.remove('d-none');
         }
+    }
+
+    // When a row finishes processing and becomes pending, set its grade (if provided) without reloading the page.
+    if (status === 'pending') {
+        applyGradeToRow(row, grade);
     }
 }
 
@@ -257,7 +286,7 @@ function applyProgress(entries) {
             row.classList.remove('js-row-queued');
         }
         row.setAttribute('data-progress', String(adjusted));
-        updateRow(row, adjusted, entry.status);
+        updateRow(row, adjusted, entry.status, entry.grade);
     });
 
     reflectHeaderButtonsState();
