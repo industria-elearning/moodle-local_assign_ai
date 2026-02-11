@@ -42,7 +42,8 @@ class assignment_config {
         }
 
         if (!array_key_exists($assignmentid, $cache)) {
-            $cache[$assignmentid] = $DB->get_record('local_assign_ai_config', ['assignmentid' => $assignmentid]);
+            $record = $DB->get_record('local_assign_ai_config', ['assignmentid' => $assignmentid]);
+            $cache[$assignmentid] = $record ?: null;
         }
 
         return $cache[$assignmentid];
