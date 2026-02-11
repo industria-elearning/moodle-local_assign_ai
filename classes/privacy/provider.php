@@ -34,9 +34,9 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider implements
-    core_userlist_provider,
+    \core_privacy\local\metadata\provider,
     \core_privacy\local\request\plugin\provider,
-    \core_privacy\local\metadata\provider {
+    core_userlist_provider {
     /**
      * Describe the types of personal data stored by this plugin.
      *
