@@ -74,7 +74,17 @@ class get_details extends external_api {
             WHERE courseid = :courseid
               AND assignmentid = :cmid
               AND userid = :userid
-            ORDER BY timemodified DESC, id DESC
+            ORDER BY
+                CASE status
+                    WHEN 'pending' THEN 0
+                    WHEN 'approve' THEN 1
+                    WHEN 'processing' THEN 2
+                    WHEN 'queued' THEN 3
+                    WHEN 'initial' THEN 4
+                    ELSE 5
+                END,
+                timemodified DESC,
+                id DESC
             LIMIT 1
         ";
 

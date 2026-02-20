@@ -27,9 +27,12 @@ import { normalizeString } from './normalize_string';
  * Injects assessment guide grades and comments.
  *
  * @param {Object} guideData The guide data object.
+ * @param {{root?: Element|Document}} options Injection options.
  * @returns {boolean} True if guide was injected successfully.
  */
-export const injectGuide = (guideData) => {
+export const injectGuide = (guideData, options = {}) => {
+    const root = options.root || document;
+    const targetUserid = options.targetUserid ? parseInt(options.targetUserid, 10) : 0;
     let injected = false;
 
     Object.keys(guideData).forEach(criterionName => {
@@ -44,7 +47,22 @@ export const injectGuide = (guideData) => {
             comments = comments.join(', ');
         }
 
-        const rows = document.querySelectorAll('tr'); // Broad search for criteria rows
+        const allrows = Array.from(root.querySelectorAll('tr')).filter((row) => {
+            if (!targetUserid) {
+                return true;
+            }
+            const form = row.closest('form');
+            if (!form) {
+                return true;
+            }
+            const userinput = form.querySelector('input[name="userid"]');
+            if (!userinput) {
+                return true;
+            }
+            return parseInt(userinput.value, 10) === targetUserid;
+        }); // Broad search for criteria rows
+        const visiblerows = allrows.filter(row => row.offsetParent !== null || row.getClientRects().length > 0);
+        const rows = visiblerows.length ? visiblerows : allrows;
         rows.forEach(row => {
             if (!normalizeString(row.textContent).includes(normalizeString(criterionName))) {
                 return;

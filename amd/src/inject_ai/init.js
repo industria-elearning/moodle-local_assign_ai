@@ -24,158 +24,335 @@
 import Ajax from 'core/ajax';
 import Notification from 'core/notification';
 import { get_string as getString } from 'core/str';
-import Log from 'core/log';
 import { injectMessage } from './inject_message';
 import { injectRubric } from './inject_rubric';
 import { injectGuide } from './inject_guide';
 import { injectSimpleGrade } from './inject_simple_grade';
+import { normalizeString } from './normalize_string';
+
+let activerunid = 0;
+let activecleanup = null;
+
+const parseInjectionData = (data) => {
+    const message = data.message ?? data.reply ?? '';
+    const rubricResponse = data.rubric_response ?? data.rubric ?? null;
+    const guideResponse = data.assessment_guide_response ?? null;
+    const grade = data.grade ?? null;
+    const status = data.status ?? 'none';
+
+    if (guideResponse && guideResponse !== 'null' && guideResponse !== '') {
+        return {
+            status,
+            message,
+            mode: 'guide',
+            payload: typeof guideResponse === 'string' ? JSON.parse(guideResponse) : guideResponse,
+            grade,
+        };
+    }
+
+    if (rubricResponse && rubricResponse !== 'null' && rubricResponse !== '') {
+        const parsed = typeof rubricResponse === 'string' ? JSON.parse(rubricResponse) : rubricResponse;
+        const isGuideLike = !Array.isArray(parsed) && typeof parsed === 'object';
+        return {
+            status,
+            message,
+            mode: isGuideLike ? 'guide' : 'rubric',
+            payload: parsed,
+            grade,
+        };
+    }
+
+    if (grade !== null && grade !== undefined) {
+        return {
+            status,
+            message,
+            mode: 'simple',
+            payload: null,
+            grade,
+        };
+    }
+
+    return {
+        status,
+        message,
+        mode: 'none',
+        payload: null,
+        grade,
+    };
+};
 
 /**
- * Injects AI-generated feedback, rubric selections and/or grade
- * into the assignment grading form for the current student.
+ * Verifies that rubric levels selected in DOM match AI expected points.
  *
- * @param {Object} params                      Required parameters.
- * @param {string} params.token                Approval token used to fetch AI details.
- * @param {number} params.userid               ID of the student being graded.
- * @param {number} params.assignmentid         Assignment identifier (cmid) from the grader URL.
- * @param {number} params.courseid             Course ID of the assignment.
+ * @param {Array} rubricData AI rubric payload.
+ * @param {Element|Document} root Grading root element.
+ * @returns {{ok: boolean, mismatches: Array}}
  */
-export const init = async ({ token, userid, assignmentid, courseid }) => {
-    if (!token || !userid || !assignmentid || !courseid) {
+const verifyRubricApplied = (rubricData, root) => {
+    if (!Array.isArray(rubricData)) {
+        return { ok: false, mismatches: [{ reason: 'rubric_data_not_array' }] };
+    }
+
+    const rows = Array.from(root.querySelectorAll('tr.criterion'));
+    const mismatches = [];
+
+    rubricData.forEach((criterionData) => {
+        const name = criterionData?.criterion || '';
+        const expected = parseFloat(criterionData?.levels?.[0]?.points ?? '');
+
+        const row = rows.find((rowItem) => {
+            const cell = rowItem.querySelector('td.description');
+            if (!cell) {
+                return false;
+            }
+            return normalizeString(cell.textContent.trim()) === normalizeString(name.trim());
+        });
+
+        if (!row) {
+            mismatches.push({ criterion: name, reason: 'row_not_found', expected });
+            return;
+        }
+
+        let selected = null;
+        const levels = Array.from(row.querySelectorAll('td.level'));
+        levels.forEach((levelCell) => {
+            const radio = levelCell.querySelector('input[type="radio"]');
+            const isSelected = !!radio?.checked || levelCell.classList.contains('checked') ||
+                levelCell.getAttribute('aria-checked') === 'true';
+            if (!isSelected) {
+                return;
+            }
+            const score = levelCell.querySelector('.scorevalue');
+            if (!score) {
+                return;
+            }
+            selected = parseFloat(score.textContent.trim());
+        });
+
+        if (selected === null) {
+            mismatches.push({ criterion: name, reason: 'no_level_selected', expected });
+            return;
+        }
+
+        if (Math.abs(selected - expected) >= 0.1) {
+            mismatches.push({ criterion: name, reason: 'points_mismatch', expected, selected });
+        }
+    });
+
+    return { ok: mismatches.length === 0, mismatches };
+};
+
+const resolveGradingRoot = () => {
+    const selectors = [
+        '#fitem_id_advancedgrading .gradingform_rubric',
+        '#fitem_id_advancedgrading .gradingform_guide',
+        '.gradingform_rubric.evaluate.editable',
+        '.gradingform_guide.evaluate.editable',
+        '.gradingform_rubric',
+        '.gradingform_guide',
+    ];
+
+    for (const selector of selectors) {
+        const nodes = Array.from(document.querySelectorAll(selector));
+        const visible = nodes.find((node) => node.offsetParent !== null || node.getClientRects().length > 0);
+        if (visible) {
+            return { root: visible, selector, visible: true, candidates: nodes.length };
+        }
+        if (nodes.length) {
+            return { root: nodes[0], selector, visible: false, candidates: nodes.length };
+        }
+    }
+
+    return { root: document, selector: 'document', visible: false, candidates: 0 };
+};
+
+/**
+ * Injects AI-generated feedback, rubric selections and/or grade.
+ *
+ * @param {Object} params Required parameters.
+ * @param {number} params.userid Current graded user id.
+ * @param {number} params.assignmentid Assignment cmid.
+ * @param {number} params.courseid Course id.
+ * @returns {Promise<void>}
+ */
+export const init = async ({ userid, assignmentid, courseid }) => {
+    if (!userid || !assignmentid || !courseid) {
         return;
     }
 
-    const [
-        strErrorParsing,
-        strRubricArray,
-        strRubricSuccess,
-        strRubricFailed
-    ] = await Promise.all([
-        getString('errorparsingrubric', 'local_assign_ai'),
+    if (activecleanup) {
+        activecleanup();
+    }
+
+    const runid = ++activerunid;
+    let intervalid = 0;
+    let observer = null;
+    let finished = false;
+    let successNotified = false;
+    let stableSuccessCount = 0;
+    let attempts = 0;
+
+    const isCurrentRun = () => runid === activerunid;
+    const cleanup = () => {
+        if (finished) {
+            return;
+        }
+        finished = true;
+        if (intervalid) {
+            clearInterval(intervalid);
+            intervalid = 0;
+        }
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+        }
+    };
+
+    activecleanup = cleanup;
+
+    const [strRubricArray, strRubricSuccess] = await Promise.all([
         getString('rubricmustarray', 'local_assign_ai'),
         getString('rubricsuccess', 'local_assign_ai'),
-        getString('rubricfailed', 'local_assign_ai'),
     ]);
 
-    Ajax.call([{
+    if (!isCurrentRun()) {
+        return;
+    }
+
+    const fetchDetails = async () => Ajax.call([{
         methodname: 'local_assign_ai_get_details',
         args: { courseid, cmid: assignmentid, userid }
-    }])[0]
-        .done(data => {
-            const message = data.message ?? data.reply ?? '';
-            const rubricResponse = data.rubric_response ?? data.rubric ?? null;
-            const guideResponse = data.assessment_guide_response ?? null;
-            const grade = data.grade ?? null;
-            const status = data.status ?? 'none';
+    }])[0];
 
-            Log.debug('[local_assign_ai] Data received:', { reference: message, rubricResponse, guideResponse, grade });
+    let cachedData = null;
+    let fetchcounter = 0;
 
-            if (status === 'approve') {
-                Log.debug('[local_assign_ai] Skipping injection for approved status.');
+    const tryInjection = () => {
+        if (!isCurrentRun() || finished || !cachedData) {
+            return;
+        }
+
+        let parsed;
+        try {
+            parsed = parseInjectionData(cachedData);
+        } catch (e) {
+            cleanup();
+            return;
+        }
+
+        if (parsed.status === 'approve') {
+            cleanup();
+            return;
+        }
+
+        const rootInfo = resolveGradingRoot();
+        const gradingRoot = rootInfo.root;
+        const hasRubricRows = gradingRoot.querySelectorAll('tr.criterion').length > 0;
+
+        if (parsed.mode === 'rubric' && !rootInfo.visible) {
+            return;
+        }
+
+        if (parsed.mode === 'rubric' && !hasRubricRows) {
+            return;
+        }
+
+        injectMessage(parsed.message);
+
+        let applied = false;
+        if (parsed.mode === 'guide') {
+            applied = injectGuide(parsed.payload, { root: gradingRoot });
+        } else if (parsed.mode === 'rubric') {
+            const result = injectRubric(parsed.payload, strRubricArray, {
+                detailed: true,
+                root: gradingRoot,
+            });
+
+            applied = !!result.injected;
+
+            const verification = verifyRubricApplied(parsed.payload, gradingRoot);
+            if (!verification.ok) {
+                applied = false;
+            }
+        } else if (parsed.mode === 'simple') {
+            applied = injectSimpleGrade(parsed.grade);
+        }
+
+        if (!applied) {
+            stableSuccessCount = 0;
+            return;
+        }
+
+        stableSuccessCount++;
+
+        if (!successNotified && stableSuccessCount >= 2) {
+            Notification.addNotification({
+                message: strRubricSuccess,
+                type: 'success'
+            });
+            successNotified = true;
+            setTimeout(() => {
+                if (isCurrentRun()) {
+                    cleanup();
+                }
+            }, 500);
+        }
+    };
+
+    const refreshAndInject = async () => {
+        if (!isCurrentRun() || finished) {
+            return;
+        }
+
+        fetchcounter++;
+        if (!cachedData || fetchcounter % 4 === 0) {
+            try {
+                cachedData = await fetchDetails();
+                if (!isCurrentRun() || finished) {
+                    return;
+                }
+            } catch (e) {
+                Notification.exception(e);
+                cleanup();
                 return;
             }
+        }
 
-            let successfulInjection = false;
+        tryInjection();
+    };
 
-            const runInjection = () => {
-                let anyInjected = false;
+    await refreshAndInject();
+    if (!isCurrentRun() || finished) {
+        return;
+    }
 
-                // 1. Message
-                if (injectMessage(message)) {
-                    // Message injected
-                }
+    const maxAttempts = 320;
+    intervalid = setInterval(() => {
+        attempts++;
+        if (attempts > maxAttempts) {
+            cleanup();
+            return;
+        }
 
-                // 2. Parse Data
-                let advancedData = null;
-                let isGuide = false;
+        void refreshAndInject();
+    }, 250);
 
-                if (guideResponse && guideResponse !== 'null' && guideResponse !== '') {
-                    try {
-                        advancedData = typeof guideResponse === 'string' ? JSON.parse(guideResponse) : guideResponse;
-                        isGuide = true;
-                    } catch (e) {
-                        Log.error('[local_assign_ai] Error parsing guide:', e);
-                        Notification.addNotification({ message: `${strErrorParsing} ${e.message}`, type: 'error' });
-                        return false;
-                    }
-                } else if (rubricResponse && rubricResponse !== 'null' && rubricResponse !== '') {
-                    try {
-                        advancedData = typeof rubricResponse === 'string' ? JSON.parse(rubricResponse) : rubricResponse;
-                        // Legacy fallback check for object-in-rubric-field
-                        if (!Array.isArray(advancedData) && typeof advancedData === 'object') {
-                            isGuide = true;
-                        }
-                    } catch (e) {
-                        Log.error('[local_assign_ai] Error parsing rubric:', e);
-                        Notification.addNotification({ message: `${strErrorParsing} ${e.message}`, type: 'error' });
-                        return false;
-                    }
-                }
+    const container = document.querySelector('#fitem_id_advancedgrading') ||
+        document.querySelector('[data-region="grading-actions-form"]') ||
+        document.body;
 
-                // 3. Dispatch
-                if (advancedData) {
-                    if (isGuide) {
-                        if (injectGuide(advancedData)) {
-                            anyInjected = true;
-                        }
-                    } else if (Array.isArray(advancedData)) {
-                        if (injectRubric(advancedData, strRubricArray)) {
-                            anyInjected = true;
-                        }
-                    }
-                } else {
-                    if (injectSimpleGrade(grade)) {
-                        anyInjected = true;
-                    }
-                }
+    observer = new MutationObserver(() => {
+        if (!isCurrentRun() || finished) {
+            return;
+        }
+        tryInjection();
+    });
 
-                return anyInjected;
-            };
+    observer.observe(container, { childList: true, subtree: true });
 
-            const showResults = (success) => {
-                Notification.addNotification({
-                    message: success ? strRubricSuccess : strRubricFailed,
-                    type: success ? 'success' : 'warning'
-                });
-            };
-
-            // Polling
-            let attempts = 0;
-            const maxAttempts = 100;
-            const interval = setInterval(() => {
-                attempts++;
-                if (!successfulInjection) {
-                    if (runInjection()) {
-                        successfulInjection = true;
-                    }
-                }
-                if ((successfulInjection && attempts > 20) || attempts > maxAttempts) {
-                    clearInterval(interval);
-                    if (successfulInjection) {
-                        showResults(true);
-                    }
-                }
-            }, 300);
-
-            // Observer
-            const container = document.querySelector('[data-region="grading-actions-form"]') ||
-                document.querySelector('.gradingform_rubric') ||
-                document.querySelector('.gradingform_guide') ||
-                document.body;
-
-            if (container) {
-                const observer = new MutationObserver(() => {
-                    const criteria = document.querySelectorAll('tr.criterion, .gradingform_guide tr');
-                    if (criteria.length > 0 && !successfulInjection) {
-                        if (runInjection()) {
-                            successfulInjection = true;
-                            observer.disconnect();
-                        }
-                    }
-                });
-                observer.observe(container, { childList: true, subtree: true });
-                setTimeout(() => observer.disconnect(), 20000);
-            }
-        })
-        .fail(Notification.exception);
+    setTimeout(() => {
+        if (isCurrentRun()) {
+            cleanup();
+        }
+    }, 90000);
 };
