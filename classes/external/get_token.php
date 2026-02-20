@@ -60,7 +60,17 @@ class get_token extends external_api {
             FROM {local_assign_ai_pending}
             WHERE userid = :userid
               AND assignmentid = :assignmentid
-            ORDER BY id DESC
+            ORDER BY
+                CASE status
+                    WHEN 'pending' THEN 0
+                    WHEN 'approve' THEN 1
+                    WHEN 'processing' THEN 2
+                    WHEN 'queued' THEN 3
+                    WHEN 'initial' THEN 4
+                    ELSE 5
+                END,
+                timemodified DESC,
+                id DESC
         ";
 
         $record = $DB->get_record_sql($sql, [
