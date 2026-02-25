@@ -26,7 +26,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['actions'] = 'Actions';
-$string['aiconfigheader'] = 'Datacurso Assignment AI';
+$string['aiconfigheader'] = 'Datacurso Assign AI';
 $string['aistatus'] = 'AI Status';
 $string['aistatus_initial_help'] = 'Send the submission to AI to generate a proposal.';
 $string['aistatus_initial_short'] = 'Pending AI review';
@@ -73,7 +73,7 @@ $string['nostatus'] = 'No feedback';
 $string['nosubmissions'] = 'No submissions found to process.';
 $string['notasksfound'] = 'No tasks to review';
 $string['onetaskreviewed'] = '1 task reviewed';
-$string['pluginname'] = 'Assignment AI';
+$string['pluginname'] = 'Assign AI';
 $string['privacy:metadata:local_assign_ai_pending'] = 'Stores AI-generated feedback pending approval.';
 $string['privacy:metadata:local_assign_ai_pending:approval_token'] = 'Unique token used to track approvals.';
 $string['privacy:metadata:local_assign_ai_pending:assignmentid'] = 'The assignment this AI feedback belongs to.';

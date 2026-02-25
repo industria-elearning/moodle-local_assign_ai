@@ -26,7 +26,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['actions'] = 'Acciones';
-$string['aiconfigheader'] = 'Datacurso Assignment AI';
+$string['aiconfigheader'] = 'Datacurso Tareas IA';
 $string['aistatus'] = 'Estado IA';
 $string['aistatus_initial_help'] = 'Envía la entrega a la IA para que genere una propuesta.';
 $string['aistatus_initial_short'] = 'Pendiente de revisión IA';
@@ -73,7 +73,7 @@ $string['nostatus'] = 'Sin retroalimentación';
 $string['nosubmissions'] = 'No se encontraron entregas para procesar.';
 $string['notasksfound'] = 'No hay tarea para revisar';
 $string['onetaskreviewed'] = 'Se revisó 1 tarea';
-$string['pluginname'] = 'Assignment AI';
+$string['pluginname'] = 'Tareas IA';
 $string['privacy:metadata:local_assign_ai_pending'] = 'Almacena las retroalimentaciones generadas por IA pendientes de aprobación.';
 $string['privacy:metadata:local_assign_ai_pending:approval_token'] = 'Token único utilizado para el seguimiento de aprobaciones.';
 $string['privacy:metadata:local_assign_ai_pending:assignmentid'] = 'La tarea a la que corresponde esta retroalimentación de IA.';
