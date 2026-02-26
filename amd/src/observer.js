@@ -27,78 +27,107 @@ import * as InjectAI from 'local_assign_ai/inject_ai';
 import Config from 'core/config';
 
 /**
- * Observes the grader page, extracts URL parameters, retrieves
- * the AI approval token for the current student, and triggers
- * injection of AI-generated feedback into the grader interface.
+ * Resolve the current grader userid from URL or DOM fallback.
+ *
+ * @returns {number}
+ */
+const resolveCurrentUserid = () => {
+    const params = new URLSearchParams(window.location.search);
+    let userid = parseInt(params.get('userid'), 10);
+
+    if (userid) {
+        return userid;
+    }
+
+    const userLink = document.querySelector('[data-region="user-info"] a[href*="user/view.php"]');
+    if (userLink) {
+        const url = new URL(userLink.href);
+        userid = parseInt(url.searchParams.get('id'), 10);
+        if (userid) {
+            return userid;
+        }
+    }
+
+    const input = document.querySelector('input[name="userid"]');
+    if (input) {
+        userid = parseInt(input.value, 10);
+        if (userid) {
+            return userid;
+        }
+    }
+
+    return 0;
+};
+
+/**
+ * Observes the grader page and starts injection for the active student.
+ *
+ * Handles grader navigation where `userid` changes in-place.
  *
  * @returns {Promise<void>}
  */
 export const init = async () => {
-
-    const params = new URLSearchParams(window.location.search);
-    const assignmentid = parseInt(params.get('id'));
     const courseid = Config.courseId || Config.courseid;
-
-    if (!assignmentid || !courseid) {
+    if (!courseid) {
         return;
     }
 
-    // Function to attempt initialization
-    const tryInit = async () => {
-        const currentParams = new URLSearchParams(window.location.search);
-        let userid = parseInt(currentParams.get('userid'));
+    let lastuserid = 0;
+    let lastassignmentid = 0;
+    let lasttoken = '';
+    let inflight = false;
+    let attempts = 0;
+    const maxAttempts = 240;
 
-        // Fallback: Try to find userid from the DOM if not in URL
+    const syncCurrentUser = async () => {
+        if (inflight) {
+            return;
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const assignmentid = parseInt(params.get('id'), 10);
+        if (!assignmentid) {
+            return;
+        }
+
+        const userid = resolveCurrentUserid();
         if (!userid) {
-            // Try Common Moodle Grader selectors
-            const userLink = document.querySelector('[data-region="user-info"] a[href*="user/view.php"]');
-            if (userLink) {
-                const url = new URL(userLink.href);
-                userid = parseInt(url.searchParams.get('id'));
-            } else {
-                const input = document.querySelector('input[name="userid"]');
-                if (input) {
-                    userid = parseInt(input.value);
-                }
-            }
+            return;
         }
 
-        if (userid) {
-            try {
-                const response = await Ajax.call([{
-                    methodname: 'local_assign_ai_get_token',
-                    args: { userid, assignmentid }
-                }])[0];
+        inflight = true;
+        try {
+            const response = await Ajax.call([{
+                methodname: 'local_assign_ai_get_token',
+                args: { userid, assignmentid }
+            }])[0];
 
-                if (response?.approval_token) {
-                    InjectAI.init({
-                        token: response.approval_token,
-                        userid,
-                        assignmentid,
-                        courseid
-                    });
-                    return true; // Success
-                }
-            } catch (err) {
-                Notification.exception(err);
-                return true; // Stop polling on error
+            const token = response?.approval_token || '';
+            const contextChanged = userid !== lastuserid || assignmentid !== lastassignmentid;
+            const tokenChanged = token !== lasttoken;
+
+            if (contextChanged || tokenChanged) {
+                InjectAI.init({ token, userid, assignmentid, courseid });
             }
+
+            lastuserid = userid;
+            lastassignmentid = assignmentid;
+            lasttoken = token;
+        } catch (err) {
+            Notification.exception(err);
+        } finally {
+            inflight = false;
         }
-        return false; // Not ready yet
     };
 
-    // Attempt immediately
-    if (await tryInit()) {
-        return;
-    }
+    await syncCurrentUser();
 
-    // Retry via polling if userid wasn't found immediately (e.g. first load)
-    let attempts = 0;
-    const maxAttempts = 20; // Wait up to ~10s
-    const interval = setInterval(async () => {
+    const interval = setInterval(() => {
         attempts++;
-        if (await tryInit() || attempts >= maxAttempts) {
+        if (attempts > maxAttempts) {
             clearInterval(interval);
+            return;
         }
+        void syncCurrentUser();
     }, 500);
 };

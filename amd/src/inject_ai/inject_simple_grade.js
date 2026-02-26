@@ -25,14 +25,34 @@
  * Injects simple numeric grade.
  *
  * @param {number|string} grade The grade to inject.
+ * @param {{root?: Element|Document}} options Injection options.
  * @returns {boolean} True if grade was injected successfully
  */
-export const injectSimpleGrade = (grade) => {
+export const injectSimpleGrade = (grade, options = {}) => {
     if (grade === null || grade === undefined) {
         return false;
     }
 
-    const input = document.querySelector('#id_grade, input[name="grade"]');
+    const root = options.root || document;
+    const targetUserid = options.targetUserid ? parseInt(options.targetUserid, 10) : 0;
+    const candidates = Array.from(root.querySelectorAll('#id_grade, input[name="grade"]'));
+    const filtered = candidates.filter((el) => {
+        if (!targetUserid) {
+            return true;
+        }
+        const form = el.closest('form');
+        if (!form) {
+            return true;
+        }
+        const userinput = form.querySelector('input[name="userid"]');
+        if (!userinput) {
+            return true;
+        }
+        return parseInt(userinput.value, 10) === targetUserid;
+    });
+    const input = filtered.find(el => el && (el.offsetParent !== null || el.getClientRects().length > 0))
+        || filtered[0]
+        || candidates[0];
     if (!input) {
         return false;
     }

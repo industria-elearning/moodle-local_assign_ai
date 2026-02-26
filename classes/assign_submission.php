@@ -96,6 +96,11 @@ class assign_submission {
 
         $assignment = $this->assigninstance;
         $cmid = $this->assign->get_course_module()->id;
+        $config = assignment_config::get_effective((int)$assignment->id);
+
+        if (empty($config->enableai)) {
+            return;
+        }
 
         if (!assignment_config::is_autograde_enabled($this->assign)) {
             // Autograde disabled: create a basic pending record for teacher review later.
@@ -176,6 +181,12 @@ class assign_submission {
         if (!$this->submission || !$this->user) {
             return;
         }
+
+        $config = assignment_config::get_effective((int)$this->assigninstance->id);
+        if (empty($config->enableai)) {
+            return;
+        }
+
         if ($this->submission->status !== ASSIGN_SUBMISSION_STATUS_SUBMITTED) {
             return;
         }
@@ -321,6 +332,7 @@ class assign_submission {
         $course = $this->assign->get_course();
         $assignment = $this->assigninstance;
         $cmid = $this->assign->get_course_module()->id;
+        $config = assignment_config::get_effective((int)$assignment->id);
 
         $advancedgrading = advanced_grading::get_definition_json($this->assign);
         $rubric = null;
@@ -347,6 +359,7 @@ class assign_submission {
             'student_name' => fullname($this->user),
             'submission_assign' => self::get_submission_text($this->submission),
             'maximum_grade' => $assignment->grade,
+            'prompt' => $config->prompt,
         ];
     }
 }
