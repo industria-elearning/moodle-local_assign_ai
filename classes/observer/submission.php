@@ -50,6 +50,10 @@ class submission {
         global $DB;
 
         try {
+            if (!assignment_config::is_feature_enabled()) {
+                return;
+            }
+
             $data = $event->get_data();
             $other = $data['other'];
 
@@ -59,6 +63,11 @@ class submission {
 
             $assign = $event->get_assign();
             if (!$assign) {
+                return;
+            }
+
+            $config = assignment_config::get_effective((int)$assign->get_instance()->id);
+            if (empty($config->enableai)) {
                 return;
             }
 
@@ -89,6 +98,10 @@ class submission {
         global $DB;
 
         try {
+            if (!assignment_config::is_feature_enabled()) {
+                return;
+            }
+
             $assign = $event->get_assign();
             if (!$assign) {
                 return;
@@ -104,7 +117,10 @@ class submission {
             $submission = $assign->get_user_submission($userid, true);
             $cmid = $assign->get_course_module()->id;
 
-            $config = assignment_config::get($assign->get_instance()->id);
+            $config = assignment_config::get_effective((int)$assign->get_instance()->id);
+            if (empty($config->enableai)) {
+                return;
+            }
 
             $records = $DB->get_records('local_assign_ai_pending', [
                 'assignmentid' => $cmid,

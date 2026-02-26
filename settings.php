@@ -26,10 +26,80 @@
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
+    $defaults = [
+        'enableassignai' => 1,
+        'defaultenableai' => 1,
+        'defaultautograde' => 0,
+        'defaultusedelay' => 0,
+        'defaultdelayminutes' => 60,
+        'defaultprompt' => get_string('promptdefaulttext', 'local_assign_ai'),
+    ];
+
+    foreach ($defaults as $name => $value) {
+        $current = get_config('local_assign_ai', $name);
+        if ($current === false || $current === '') {
+            set_config($name, $value, 'local_assign_ai');
+        }
+    }
+
     $settings = new admin_settingpage('local_assign_ai_settings', new lang_string('pluginname', 'local_assign_ai'));
 
-    // phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedIf
     if ($ADMIN->fulltree) {
-        // TO-DO: Define actual plugin settings page and add it to the tree - {@link https://docs.moodle.org/dev/Admin_settings}.
+        $settings->add(new admin_setting_configcheckbox(
+            'local_assign_ai/enableassignai',
+            get_string('enableassignai', 'local_assign_ai'),
+            get_string('enableassignai_desc', 'local_assign_ai'),
+            1
+        ));
+
+        $settings->add(new admin_setting_configcheckbox(
+            'local_assign_ai/defaultenableai',
+            get_string('defaultenableai', 'local_assign_ai'),
+            get_string('defaultenableai_desc', 'local_assign_ai'),
+            1
+        ));
+
+        $settings->add(new admin_setting_configcheckbox(
+            'local_assign_ai/defaultautograde',
+            get_string('defaultautograde', 'local_assign_ai'),
+            get_string('defaultautograde_desc', 'local_assign_ai'),
+            0
+        ));
+
+        $settings->add(new admin_setting_configcheckbox(
+            'local_assign_ai/defaultusedelay',
+            get_string('defaultusedelay', 'local_assign_ai'),
+            get_string('defaultusedelay_desc', 'local_assign_ai'),
+            0
+        ));
+
+        $settings->add(new admin_setting_configtext(
+            'local_assign_ai/defaultdelayminutes',
+            get_string('defaultdelayminutes', 'local_assign_ai'),
+            get_string('defaultdelayminutes_desc', 'local_assign_ai'),
+            60,
+            PARAM_INT
+        ));
+
+        $settings->add(new admin_setting_configtextarea(
+            'local_assign_ai/defaultprompt',
+            get_string('defaultprompt', 'local_assign_ai'),
+            get_string('defaultprompt_desc', 'local_assign_ai'),
+            get_string('promptdefaulttext', 'local_assign_ai'),
+            PARAM_TEXT,
+            3,
+            3
+        ));
+
+        $settings->hide_if('local_assign_ai/defaultautograde', 'local_assign_ai/defaultenableai', 'eq', 0);
+        $settings->hide_if('local_assign_ai/defaultusedelay', 'local_assign_ai/defaultenableai', 'eq', 0);
+        $settings->hide_if('local_assign_ai/defaultdelayminutes', 'local_assign_ai/defaultenableai', 'eq', 0);
+        $settings->hide_if('local_assign_ai/defaultprompt', 'local_assign_ai/defaultenableai', 'eq', 0);
+
+        $settings->hide_if('local_assign_ai/defaultusedelay', 'local_assign_ai/defaultautograde', 'eq', 0);
+        $settings->hide_if('local_assign_ai/defaultdelayminutes', 'local_assign_ai/defaultautograde', 'eq', 0);
+        $settings->hide_if('local_assign_ai/defaultdelayminutes', 'local_assign_ai/defaultusedelay', 'eq', 0);
     }
+
+    $ADMIN->add('localplugins', $settings);
 }

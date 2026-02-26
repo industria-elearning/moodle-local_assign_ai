@@ -27,6 +27,20 @@ use assign;
  */
 class assignment_config {
     /**
+     * Checks whether assign AI features are globally enabled.
+     *
+     * @return bool
+     */
+    public static function is_feature_enabled(): bool {
+        $enabled = get_config('local_assign_ai', 'enableassignai');
+        if ($enabled === false || $enabled === '') {
+            return true;
+        }
+
+        return !empty($enabled);
+    }
+
+    /**
      * Retrieves cached configuration for a given assignment instance.
      *
      * @param int $assignmentid The assignment instance ID (from {assign}).
@@ -56,7 +70,71 @@ class assignment_config {
      * @return bool
      */
     public static function is_autograde_enabled(assign $assign): bool {
-        $config = self::get($assign->get_instance()->id);
-        return !empty($config) && !empty($config->autograde);
+        if (!self::is_feature_enabled()) {
+            return false;
+        }
+
+        $config = self::get_effective((int)$assign->get_instance()->id);
+        return !empty($config->enableai) && !empty($config->autograde);
+    }
+
+    /**
+     * Returns the effective configuration for an assignment, falling back to site defaults.
+     *
+     * @param int $assignmentid The assignment instance ID (from {assign}).
+     * @return \stdClass
+     */
+    public static function get_effective(int $assignmentid): \stdClass {
+        $record = self::get($assignmentid);
+
+        $rawdefaultenableai = get_config('local_assign_ai', 'defaultenableai');
+        $rawdefaultautograde = get_config('local_assign_ai', 'defaultautograde');
+        $rawdefaultusedelay = get_config('local_assign_ai', 'defaultusedelay');
+        $rawdefaultdelayminutes = get_config('local_assign_ai', 'defaultdelayminutes');
+        $rawdefaultprompt = get_config('local_assign_ai', 'defaultprompt');
+
+        $defaultenableai = ($rawdefaultenableai === false || $rawdefaultenableai === '') ? 1 : (int)$rawdefaultenableai;
+        $defaultautograde = ($rawdefaultautograde === false || $rawdefaultautograde === '') ? 0 : (int)$rawdefaultautograde;
+        $defaultusedelay = ($rawdefaultusedelay === false || $rawdefaultusedelay === '') ? 0 : (int)$rawdefaultusedelay;
+        $defaultdelayminutes = ($rawdefaultdelayminutes === false || $rawdefaultdelayminutes === '')
+            ? 60
+            : max(1, (int)$rawdefaultdelayminutes);
+        $defaultprompt = ($rawdefaultprompt === false || trim((string)$rawdefaultprompt) === '')
+            ? get_string('promptdefaulttext', 'local_assign_ai')
+            : (string)$rawdefaultprompt;
+
+        $config = (object) [
+            'enableai' => $defaultenableai,
+            'autograde' => $defaultautograde,
+            'usedelay' => $defaultusedelay,
+            'delayminutes' => $defaultdelayminutes,
+            'graderid' => null,
+            'prompt' => $defaultprompt,
+        ];
+
+        if (!$record) {
+            return $config;
+        }
+
+        if (isset($record->enableai)) {
+            $config->enableai = (int)$record->enableai;
+        }
+        if (isset($record->autograde)) {
+            $config->autograde = (int)$record->autograde;
+        }
+        if (isset($record->usedelay)) {
+            $config->usedelay = (int)$record->usedelay;
+        }
+        if (isset($record->delayminutes) && (int)$record->delayminutes > 0) {
+            $config->delayminutes = (int)$record->delayminutes;
+        }
+        if (!empty($record->graderid)) {
+            $config->graderid = (int)$record->graderid;
+        }
+        if (isset($record->prompt) && trim((string)$record->prompt) !== '') {
+            $config->prompt = (string)$record->prompt;
+        }
+
+        return $config;
     }
 }
