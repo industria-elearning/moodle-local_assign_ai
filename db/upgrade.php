@@ -262,7 +262,7 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025120803, 'local', 'assign_ai');
     }
 
-    if ($oldversion < 2026110201) {
+    if ($oldversion < 2026021101) {
         // Define field prompt to be added to local_assign_ai_config.
         $table = new xmldb_table('local_assign_ai_config');
         $field = new xmldb_field('prompt', XMLDB_TYPE_TEXT, null, null, null, null, null, 'delayminutes');
@@ -272,17 +272,17 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
             $dbman->add_field($table, $field);
         }
 
-        upgrade_plugin_savepoint(true, 2026110201, 'local', 'assign_ai');
+        upgrade_plugin_savepoint(true, 2026021101, 'local', 'assign_ai');
     }
 
-    if ($oldversion < 2026110202) {
+    if ($oldversion < 2026021102) {
         // Force the default auto-approval setting to disabled by default.
         set_config('defaultautograde', 0, 'local_assign_ai');
 
-        upgrade_plugin_savepoint(true, 2026110202, 'local', 'assign_ai');
+        upgrade_plugin_savepoint(true, 2026021102, 'local', 'assign_ai');
     }
 
-    if ($oldversion < 2026110203) {
+    if ($oldversion < 2026021103) {
         // Define field enableai to be added to local_assign_ai_config.
         $table = new xmldb_table('local_assign_ai_config');
         $field = new xmldb_field('enableai', XMLDB_TYPE_INTEGER, '1', null, null, null, null, 'assignmentid');
@@ -295,7 +295,7 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
         // Ensure default value for the new global setting.
         set_config('defaultenableai', 1, 'local_assign_ai');
 
-        upgrade_plugin_savepoint(true, 2026110203, 'local', 'assign_ai');
+        upgrade_plugin_savepoint(true, 2026021103, 'local', 'assign_ai');
     }
 
     return true;
