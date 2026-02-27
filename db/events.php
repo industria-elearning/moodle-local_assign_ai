@@ -54,6 +54,13 @@ $observers = [
         'priority'    => 9999,
     ],
     [
+        'eventname' => '\mod_assign\event\assessable_submitted',
+        'callback' => '\local_assign_ai\observer\submission::assessable_submitted',
+        'includefile' => '/local/assign_ai/classes/observer/submission.php',
+        'internal' => false,
+        'priority' => 9999,
+    ],
+    [
         'eventname'   => '\core\event\course_module_deleted',
         'callback'    => '\local_assign_ai\observer\module::course_module_deleted',
         'includefile' => '/local/assign_ai/classes/observer/module.php',
