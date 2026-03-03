@@ -360,6 +360,7 @@ class assign_submission {
             'submission_assign' => self::get_submission_text($this->submission),
             'maximum_grade' => $assignment->grade,
             'prompt' => $config->prompt,
+            'lang' => $config->lang,
         ];
     }
 }

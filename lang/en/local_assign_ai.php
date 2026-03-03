@@ -26,6 +26,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['actions'] = 'Actions';
+$string['ai_response_language'] = 'AI response language';
+$string['ai_response_language_help'] = 'Select the language in which the AI will respond when reviewing this assignment.';
 $string['aiconfigheader'] = 'Datacurso Assign AI';
 $string['aiprompt'] = 'Give instructions to the AI';
 $string['aiprompt_help'] = 'Additional instructions sent to the AI as part of the "prompt" field.';

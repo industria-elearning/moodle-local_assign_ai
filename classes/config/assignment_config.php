@@ -92,6 +92,7 @@ class assignment_config {
         $rawdefaultusedelay = get_config('local_assign_ai', 'defaultusedelay');
         $rawdefaultdelayminutes = get_config('local_assign_ai', 'defaultdelayminutes');
         $rawdefaultprompt = get_config('local_assign_ai', 'defaultprompt');
+        $rawdefaultlang = get_config('core', 'lang');
 
         $defaultenableai = ($rawdefaultenableai === false || $rawdefaultenableai === '') ? 1 : (int)$rawdefaultenableai;
         $defaultautograde = ($rawdefaultautograde === false || $rawdefaultautograde === '') ? 0 : (int)$rawdefaultautograde;
@@ -102,6 +103,9 @@ class assignment_config {
         $defaultprompt = ($rawdefaultprompt === false || trim((string)$rawdefaultprompt) === '')
             ? get_string('promptdefaulttext', 'local_assign_ai')
             : (string)$rawdefaultprompt;
+        $defaultlang = ($rawdefaultlang === false || trim((string)$rawdefaultlang) === '')
+            ? current_language()
+            : trim((string)$rawdefaultlang);
 
         $config = (object) [
             'enableai' => $defaultenableai,
@@ -110,6 +114,7 @@ class assignment_config {
             'delayminutes' => $defaultdelayminutes,
             'graderid' => null,
             'prompt' => $defaultprompt,
+            'lang' => $defaultlang,
         ];
 
         if (!$record) {
@@ -133,6 +138,9 @@ class assignment_config {
         }
         if (isset($record->prompt) && trim((string)$record->prompt) !== '') {
             $config->prompt = (string)$record->prompt;
+        }
+        if (isset($record->lang) && trim((string)$record->lang) !== '') {
+            $config->lang = trim((string)$record->lang);
         }
 
         return $config;

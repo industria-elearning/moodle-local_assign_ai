@@ -26,6 +26,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['actions'] = 'Acciones';
+$string['ai_response_language'] = 'Idioma de respuesta de la IA';
+$string['ai_response_language_help'] = 'Selecciona el idioma en el que la IA responderá al revisar esta tarea.';
 $string['aiconfigheader'] = 'Datacurso Tareas IA';
 $string['aiprompt'] = 'Dale indicaciones a la IA';
 $string['aiprompt_help'] = 'Indicaciones adicionales que se envían a la IA en el campo "prompt".';
