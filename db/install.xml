@@ -43,6 +43,7 @@
         <FIELD NAME="delayminutes" TYPE="int" LENGTH="6" NOTNULL="false" DEFAULT="0"
           SEQUENCE="false" />
         <FIELD NAME="prompt" TYPE="text" NOTNULL="false" SEQUENCE="false" />
+        <FIELD NAME="lang" TYPE="char" LENGTH="20" NOTNULL="false" SEQUENCE="false" />
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" />
         <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"
           SEQUENCE="false" />

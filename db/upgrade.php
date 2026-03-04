@@ -298,5 +298,18 @@ function xmldb_local_assign_ai_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026110203, 'local', 'assign_ai');
     }
 
+    if ($oldversion < 2026110302) {
+        // Define field lang to be added to local_assign_ai_config.
+        $table = new xmldb_table('local_assign_ai_config');
+        $field = new xmldb_field('lang', XMLDB_TYPE_CHAR, '20', null, null, null, null, 'prompt');
+
+        // Conditionally launch add field lang.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2026110302, 'local', 'assign_ai');
+    }
+
     return true;
 }

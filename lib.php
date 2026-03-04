@@ -110,6 +110,22 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
         $prompt = get_string('promptdefaulttext', 'local_assign_ai');
     }
 
+    $languages = get_string_manager()->get_list_of_languages(null, 'iso6391');
+    $langoptions = [];
+    foreach ($languages as $code => $name) {
+        $langoptions[$code] = "$name ($code)";
+    }
+
+    $defaultlang = trim((string)get_config('core', 'lang'));
+    if ($defaultlang === '') {
+        $defaultlang = current_language();
+    }
+
+    $selectedlang = trim((string)($config->lang ?? ''));
+    if ($selectedlang === '') {
+        $selectedlang = $defaultlang;
+    }
+
     $mform->addElement('header', 'local_assign_ai_header', get_string('aiconfigheader', 'local_assign_ai'));
     $mform->addElement(
         'select',
@@ -213,6 +229,21 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
     $mform->addHelpButton('local_assign_ai_prompt', 'aiprompt', 'local_assign_ai');
     $mform->setDefault('local_assign_ai_prompt', $prompt);
     $mform->hideIf('local_assign_ai_prompt', 'local_assign_ai_enableai', 'neq', 1);
+
+    $mform->addElement(
+        'autocomplete',
+        'local_assign_ai_lang',
+        get_string('ai_response_language', 'local_assign_ai'),
+        $langoptions,
+        [
+            'multiple' => false,
+            'noselectionstring' => get_string('choosedots'),
+        ]
+    );
+    $mform->setType('local_assign_ai_lang', PARAM_ALPHANUMEXT);
+    $mform->addHelpButton('local_assign_ai_lang', 'ai_response_language', 'local_assign_ai');
+    $mform->setDefault('local_assign_ai_lang', $selectedlang);
+    $mform->hideIf('local_assign_ai_lang', 'local_assign_ai_enableai', 'neq', 1);
 }
 
 /**
@@ -252,6 +283,7 @@ function local_assign_ai_coursemodule_edit_post_actions($data, $course) {
     $rawdefaultusedelay = get_config('local_assign_ai', 'defaultusedelay');
     $rawdefaultdelayminutes = get_config('local_assign_ai', 'defaultdelayminutes');
     $rawdefaultprompt = get_config('local_assign_ai', 'defaultprompt');
+    $rawdefaultlang = get_config('core', 'lang');
 
     $defaultenableai = ($rawdefaultenableai === false || $rawdefaultenableai === '') ? 1 : (int)$rawdefaultenableai;
     $defaultautograde = ($rawdefaultautograde === false || $rawdefaultautograde === '') ? 0 : (int)$rawdefaultautograde;
@@ -262,6 +294,9 @@ function local_assign_ai_coursemodule_edit_post_actions($data, $course) {
     $defaultprompt = ($rawdefaultprompt === false || trim((string)$rawdefaultprompt) === '')
         ? get_string('promptdefaulttext', 'local_assign_ai')
         : (string)$rawdefaultprompt;
+    $defaultlang = ($rawdefaultlang === false || trim((string)$rawdefaultlang) === '')
+        ? current_language()
+        : trim((string)$rawdefaultlang);
 
     $enableai = property_exists($data, 'local_assign_ai_enableai')
         ? (empty($data->local_assign_ai_enableai) ? 0 : 1)
@@ -281,6 +316,13 @@ function local_assign_ai_coursemodule_edit_post_actions($data, $course) {
         : (string)($record->prompt ?? $defaultprompt);
     if ($prompt === '') {
         $prompt = $defaultprompt;
+    }
+
+    $lang = property_exists($data, 'local_assign_ai_lang')
+        ? clean_param((string)$data->local_assign_ai_lang, PARAM_ALPHANUMEXT)
+        : (string)($record->lang ?? $defaultlang);
+    if ($lang === '') {
+        $lang = $defaultlang;
     }
 
     if (!$enableai) {
@@ -304,6 +346,7 @@ function local_assign_ai_coursemodule_edit_post_actions($data, $course) {
         'delayminutes' => $delayminutes,
         'graderid' => $graderid,
         'prompt' => $prompt,
+        'lang' => $lang,
         'timemodified' => time(),
         'usermodified' => $USER->id ?? null,
     ];
