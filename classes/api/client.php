@@ -17,6 +17,7 @@
 namespace local_assign_ai\api;
 
 use aiprovider_datacurso\httpclient\ai_services_api;
+use local_assign_ai\local\payload_anonymizer;
 use local_assign_ai\utils;
 
 /**
@@ -35,13 +36,16 @@ class client {
      */
     public static function send_to_ai($payload) {
         $payload = utils::normalize_payload($payload);
+        $anonymized = payload_anonymizer::anonymize($payload);
+        $payload = $anonymized['payload'];
+        $replacements = $anonymized['replacements'];
 
         $client = new ai_services_api();
 
         $response = $client->request('POST', '/assign/answer', $payload);
 
         return [
-            'reply' => $response['reply'],
+            'reply' => payload_anonymizer::deanonymize_text((string)($response['reply'] ?? ''), $replacements),
             'grade' => $response['grade'],
             'rubric' => $response['rubric'] ?? null,
             'assessment_guide' => $response['assessment_guide'] ?? null,
