@@ -40,6 +40,7 @@ object is present (`rubric` or `assessment_guide`).
   "cmi_id": 56,
   "assignment_title": "Essay 1",
   "assignment_description": "Write about...",
+  "assignment_activity_instructions": "Include references in APA format...",
   "rubric": null,
   "assessment_guide": null,
   "userid": 789,
@@ -61,6 +62,7 @@ When the assignment uses a rubric, `rubric` is populated and `assessment_guide` 
   "cmi_id": 56,
   "assignment_title": "Essay 1",
   "assignment_description": "Write about...",
+  "assignment_activity_instructions": "Include references in APA format...",
   "rubric": {
     "title": "Rubric title",
     "description": "Rubric description",
@@ -103,6 +105,7 @@ When the assignment uses a marking guide, `assessment_guide` is populated and `r
   "cmi_id": 56,
   "assignment_title": "Essay 1",
   "assignment_description": "Write about...",
+  "assignment_activity_instructions": "Include references in APA format...",
   "rubric": null,
   "assessment_guide": {
     "title": "Guide title",

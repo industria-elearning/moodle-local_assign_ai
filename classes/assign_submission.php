@@ -353,6 +353,7 @@ class assign_submission {
             'cmi_id' => $cmid,
             'assignment_title' => $assignment->name,
             'assignment_description' => $assignment->intro,
+            'assignment_activity_instructions' => $assignment->activity ?? '',
             'rubric' => $rubric,
             'assessment_guide' => $assessmentguide,
             'userid' => $this->user->id,
