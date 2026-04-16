@@ -42,6 +42,22 @@ function local_assign_ai_extend_settings_navigation(settings_navigation $nav, co
         return;
     }
 
+    // Hide assign AI entries entirely when the site master switch is disabled.
+    if (!\local_assign_ai\config\assignment_config::is_feature_enabled()) {
+        return;
+    }
+
+    // Hide assign AI entries when the assignment-level switch is disabled.
+    $assignid = (int)($PAGE->cm->instance ?? 0);
+    if ($assignid <= 0) {
+        return;
+    }
+
+    $effectiveconfig = \local_assign_ai\config\assignment_config::get_effective($assignid);
+    if (empty($effectiveconfig->enableai)) {
+        return;
+    }
+
     // Find the module settings node.
     $modulesettings = $nav->find('modulesettings', navigation_node::TYPE_SETTING);
 
