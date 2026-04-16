@@ -16,8 +16,12 @@
 
 namespace local_assign_ai\task;
 
+defined('MOODLE_INTERNAL') || die();
 
-use local_assign_ai\task\process_submission_ai;
+require_once($CFG->dirroot . '/mod/assign/locallib.php');
+
+
+use local_assign_ai\config\assignment_config;
 
 /**
  * Scheduled task to process delayed AI queue for assignments.
@@ -60,9 +64,55 @@ class process_ai_queue extends \core\task\scheduled_task {
 
             try {
                 if ($item->type === 'submission') {
-                    $task = new process_submission_ai();
-                    $task->set_custom_data($data);
-                    \core\task\manager::queue_adhoc_task($task);
+                    $userid = (int)($data->userid ?? 0);
+                    $cmid = (int)($data->cmid ?? 0);
+
+                    if ($userid <= 0 || $cmid <= 0) {
+                        $item->processed = 1;
+                        $DB->update_record('local_assign_ai_queue', $item);
+                        continue;
+                    }
+
+                    $cm = get_coursemodule_from_id('assign', $cmid, 0, false, IGNORE_MISSING);
+                    if (!$cm) {
+                        $item->processed = 1;
+                        $DB->update_record('local_assign_ai_queue', $item);
+                        continue;
+                    }
+
+                    $course = get_course($cm->course);
+                    $context = \context_module::instance($cmid);
+                    $assign = new \assign($context, $cm, $course);
+
+                    $config = assignment_config::get_effective((int)$assign->get_instance()->id);
+                    if (empty($config->enableai)) {
+                        $item->processed = 1;
+                        $DB->update_record('local_assign_ai_queue', $item);
+                        continue;
+                    }
+
+                    $submission = $assign->get_user_submission($userid, false);
+                    if (!$submission || $submission->status !== ASSIGN_SUBMISSION_STATUS_SUBMITTED) {
+                        $item->processed = 1;
+                        $DB->update_record('local_assign_ai_queue', $item);
+                        continue;
+                    }
+
+                    if (!empty($config->usedelay)) {
+                        $submissiontime = max((int)$submission->timecreated, (int)$submission->timemodified);
+                        $requiredtime = $submissiontime + (max(1, (int)$config->delayminutes) * 60);
+
+                        if ($now < $requiredtime) {
+                            if ((int)$item->timetoprocess !== (int)$requiredtime) {
+                                $item->timetoprocess = (int)$requiredtime;
+                                $DB->update_record('local_assign_ai_queue', $item);
+                            }
+                            continue;
+                        }
+                    }
+
+                    $submissionprocessor = new \local_assign_ai\assign_submission($userid, $assign);
+                    $submissionprocessor->process_submission_ai();
                 }
 
                 $item->processed = 1;

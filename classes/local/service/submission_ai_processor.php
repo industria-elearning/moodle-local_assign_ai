@@ -14,43 +14,34 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_assign_ai\task;
+namespace local_assign_ai\local\service;
 
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/mod/assign/locallib.php');
 
-use core\task\adhoc_task;
-use local_assign_ai\local\service\submission_ai_processor;
-
 /**
- * Ad-hoc task to process AI submission for an assignment.
+ * Service to process a single assignment submission with AI.
  *
  * @package    local_assign_ai
- * @category   task
- * @copyright  2025 Wilber Narvaez <https://datacurso.com>
+ * @copyright  2026 Datacurso
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class process_submission_ai extends adhoc_task {
+class submission_ai_processor {
     /**
-     * Execute the task.
+     * Process one submission through Assign AI workflow.
      *
-     * Expected custom data:
-     *  - userid (int)
-     *  - cmid (int)
-     *
+     * @param int $userid User id.
+     * @param int $cmid Assign course module id.
      * @return void
      */
-    public function execute(): void {
-        $data = $this->get_custom_data();
-        if (empty($data->userid) || empty($data->cmid)) {
-            return;
-        }
+    public static function process(int $userid, int $cmid): void {
+        $cm = get_coursemodule_from_id('assign', $cmid, 0, false, MUST_EXIST);
+        $course = get_course($cm->course);
+        $context = \context_module::instance($cmid);
 
-        try {
-            submission_ai_processor::process((int)$data->userid, (int)$data->cmid);
-        } catch (\Throwable $e) {
-            mtrace($e);
-        }
+        $assign = new \assign($context, $cm, $course);
+        $submission = new \local_assign_ai\assign_submission($userid, $assign);
+        $submission->process_submission_ai();
     }
 }

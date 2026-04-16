@@ -98,19 +98,29 @@ class submission {
      * @param \stdClass $config Effective assignment config.
      * @return void
      */
-    private static function enqueue_submission_processing(int $userid, int $cmid, \stdClass $config): void {
+    private static function enqueue_submission_processing(
+        int $userid,
+        int $cmid,
+        \stdClass $config,
+        ?int $submissiontime = null
+    ): void {
         global $DB;
+
+        $submissiontime = ($submissiontime !== null && $submissiontime > 0)
+            ? (int) $submissiontime
+            : time();
 
         $taskdata = (object) [
             'userid' => $userid,
             'cmid' => $cmid,
+            'submissiontime' => $submissiontime,
         ];
 
         self::delete_submission_queue($userid, $cmid);
 
         if (!empty($config->usedelay)) {
             $delay = max(1, (int) $config->delayminutes);
-            $timetoprocess = time() + ($delay * 60);
+            $timetoprocess = $submissiontime + ($delay * 60);
 
             $DB->insert_record('local_assign_ai_queue', (object) [
                 'type' => 'submission',
@@ -166,12 +176,13 @@ class submission {
             }
 
             $cmid = $assign->get_course_module()->id;
-            $task = new process_submission_ai();
-            $task->set_custom_data((object) [
-                'userid' => (int) $userid,
-                'cmid' => (int) $cmid,
-            ]);
-            \core\task\manager::queue_adhoc_task($task);
+            $submission = $assign->get_user_submission((int) $userid, true);
+            $submissiontime = time();
+            if ($submission && $submission->status === ASSIGN_SUBMISSION_STATUS_SUBMITTED) {
+                $submissiontime = max((int) $submission->timecreated, (int) $submission->timemodified);
+            }
+
+            self::enqueue_submission_processing((int) $userid, (int) $cmid, $config, $submissiontime);
         } catch (\Exception $e) {
             debugging('Exception in submission_created observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
@@ -213,6 +224,9 @@ class submission {
 
             $submission = $assign->get_user_submission($userid, true);
             $cmid = $assign->get_course_module()->id;
+            $submissiontime = $submission
+                ? max((int) $submission->timecreated, (int) $submission->timemodified)
+                : time();
 
             $config = assignment_config::get_effective((int)$assign->get_instance()->id);
             if (empty($config->enableai)) {
@@ -227,7 +241,7 @@ class submission {
             $record = reset($records);
 
             if (!$record) {
-                self::enqueue_submission_processing((int) $userid, (int) $cmid, $config);
+                self::enqueue_submission_processing((int) $userid, (int) $cmid, $config, $submissiontime);
                 return;
             }
 
@@ -237,12 +251,12 @@ class submission {
 
             if ($record->status === 'pending') {
                 $DB->delete_records('local_assign_ai_pending', ['id' => $record->id]);
-                self::enqueue_submission_processing((int) $userid, (int) $cmid, $config);
+                self::enqueue_submission_processing((int) $userid, (int) $cmid, $config, $submissiontime);
                 return;
             }
 
             if ($record->status === 'approve') {
-                self::enqueue_submission_processing((int) $userid, (int) $cmid, $config);
+                self::enqueue_submission_processing((int) $userid, (int) $cmid, $config, $submissiontime);
                 return;
             }
         } catch (\Exception $e) {
@@ -381,7 +395,8 @@ class submission {
             }
 
             $cmid = $assign->get_course_module()->id;
-            self::enqueue_submission_processing((int) $userid, (int) $cmid, $config);
+            $submissiontime = max((int) $submission->timecreated, (int) $submission->timemodified);
+            self::enqueue_submission_processing((int) $userid, (int) $cmid, $config, $submissiontime);
         } catch (\Exception $e) {
             debugging('Exception in assessable_submitted observer: ' . $e->getMessage(), DEBUG_DEVELOPER);
         }
