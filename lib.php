@@ -93,7 +93,7 @@ function local_assign_ai_extend_settings_navigation(settings_navigation $nav, co
  * @return void
  */
 function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
-    global $USER, $DB;
+    global $USER, $DB, $PAGE;
 
     if ($formwrapper->get_current()->modulename !== 'assign') {
         return;
@@ -113,10 +113,15 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
         return;
     }
 
+    $globalenabled = \local_assign_ai\config\assignment_config::is_global_ai_enabled();
+
     $assignid = $formwrapper->get_current()->instance ?? 0;
     $config = \local_assign_ai\config\assignment_config::get_effective((int)$assignid);
 
     $enableai = (int)($config->enableai ?? 1);
+    if (!$globalenabled) {
+        $enableai = 0;
+    }
     $autograde = (int)($config->autograde ?? 0);
     $graderdefault = $config->graderid ?? null;
     $usedelay = (int)($config->usedelay ?? 0);
@@ -151,6 +156,14 @@ function local_assign_ai_coursemodule_standard_elements($formwrapper, $mform) {
     );
     $mform->addHelpButton('local_assign_ai_enableai', 'enableai', 'local_assign_ai');
     $mform->setDefault('local_assign_ai_enableai', $enableai);
+
+    if (!$globalenabled) {
+        $PAGE->requires->js_call_amd('local_assign_ai/assignment_enable_guard', 'init', [
+            '#id_local_assign_ai_enableai',
+            get_string('enableai_global_disabled_notice', 'local_assign_ai'),
+            get_string('dismissnotification', 'core'),
+        ]);
+    }
 
     $mform->addElement(
         'select',
@@ -317,6 +330,11 @@ function local_assign_ai_coursemodule_edit_post_actions($data, $course) {
     $enableai = property_exists($data, 'local_assign_ai_enableai')
         ? (empty($data->local_assign_ai_enableai) ? 0 : 1)
         : $defaultenableai;
+
+    if (!\local_assign_ai\config\assignment_config::is_global_ai_enabled()) {
+        $enableai = 0;
+    }
+
     $autograde = property_exists($data, 'local_assign_ai_autograde')
         ? (empty($data->local_assign_ai_autograde) ? 0 : 1)
         : $defaultautograde;

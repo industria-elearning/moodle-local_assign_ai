@@ -52,12 +52,22 @@ if ($hassiteconfig) {
             1
         ));
 
-        $settings->add(new admin_setting_configcheckbox(
+        $globalenableaisetting = new admin_setting_configcheckbox(
             'local_assign_ai/defaultenableai',
             get_string('defaultenableai', 'local_assign_ai'),
             get_string('defaultenableai_desc', 'local_assign_ai'),
             1
-        ));
+        );
+        $globalenableaisetting->set_updatedcallback(function(string $settingname): void {
+            if ($settingname !== 'local_assign_ai/defaultenableai') {
+                return;
+            }
+
+            if (!\local_assign_ai\config\assignment_config::is_global_ai_enabled()) {
+                \local_assign_ai\config\assignment_config::disable_all_assignments_ai();
+            }
+        });
+        $settings->add($globalenableaisetting);
 
         $settings->add(new admin_setting_configcheckbox(
             'local_assign_ai/defaultautograde',
