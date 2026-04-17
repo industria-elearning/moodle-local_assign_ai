@@ -62,7 +62,10 @@ class manager {
 
         $feedback = $DB->get_record('assignfeedback_comments', ['grade' => $grade->id]);
         if ($feedback && $feedback->commenttext !== null) {
-            return $feedback->commenttext;
+            $comment = trim((string)$feedback->commenttext);
+            if ($comment !== '') {
+                return $feedback->commenttext;
+            }
         }
 
         return null;
