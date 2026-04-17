@@ -41,6 +41,20 @@ class assignment_config {
     }
 
     /**
+     * Checks whether assignment AI can be enabled globally.
+     *
+     * @return bool
+     */
+    public static function is_global_ai_enabled(): bool {
+        $enabled = get_config('local_assign_ai', 'defaultenableai');
+        if ($enabled === false || $enabled === '') {
+            return true;
+        }
+
+        return !empty($enabled);
+    }
+
+    /**
      * Retrieves cached configuration for a given assignment instance.
      *
      * @param int $assignmentid The assignment instance ID (from {assign}).
@@ -143,6 +157,62 @@ class assignment_config {
             $config->lang = trim((string)$record->lang);
         }
 
+        if (!self::is_global_ai_enabled()) {
+            $config->enableai = 0;
+            $config->autograde = 0;
+            $config->usedelay = 0;
+            $config->delayminutes = 0;
+            $config->graderid = null;
+        }
+
         return $config;
+    }
+
+    /**
+     * Disables AI configuration in all existing assignments.
+     *
+     * @return void
+     */
+    public static function disable_all_assignments_ai(): void {
+        global $DB, $USER;
+
+        $now = time();
+        $userid = $USER->id ?? null;
+
+        $records = $DB->get_records('local_assign_ai_config');
+        $configuredids = [];
+
+        foreach ($records as $record) {
+            $record->enableai = 0;
+            $record->autograde = 0;
+            $record->usedelay = 0;
+            $record->delayminutes = 0;
+            $record->graderid = null;
+            $record->timemodified = $now;
+            $record->usermodified = $userid;
+
+            $DB->update_record('local_assign_ai_config', $record);
+            $configuredids[(int)$record->assignmentid] = true;
+        }
+
+        $allassignments = $DB->get_records('assign', null, '', 'id');
+        foreach ($allassignments as $assignment) {
+            $assignmentid = (int)$assignment->id;
+            if (isset($configuredids[$assignmentid])) {
+                continue;
+            }
+
+            $DB->insert_record('local_assign_ai_config', (object) [
+                'assignmentid' => $assignmentid,
+                'enableai' => 0,
+                'autograde' => 0,
+                'usedelay' => 0,
+                'delayminutes' => 0,
+                'graderid' => null,
+                'timecreated' => $now,
+                'timemodified' => $now,
+                'usermodified' => $userid,
+            ]);
+        }
     }
 }
