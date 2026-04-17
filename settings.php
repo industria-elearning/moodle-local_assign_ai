@@ -58,7 +58,7 @@ if ($hassiteconfig) {
             get_string('defaultenableai_desc', 'local_assign_ai'),
             1
         );
-        $globalenableaisetting->set_updatedcallback(function(string $settingname): void {
+        $globalenableaisetting->set_updatedcallback(function (string $settingname): void {
             if ($settingname !== 'local_assign_ai/defaultenableai') {
                 return;
             }

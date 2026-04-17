@@ -96,6 +96,7 @@ class submission {
      * @param int $userid User id.
      * @param int $cmid Course module id.
      * @param \stdClass $config Effective assignment config.
+     * @param int|null $submissiontime Unix timestamp for the submission event.
      * @return void
      */
     private static function enqueue_submission_processing(
