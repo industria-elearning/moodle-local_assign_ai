@@ -31,6 +31,7 @@
 <div class="local-assign-ai-modal">
     <textarea id="airesponse-edit" class="form-control" rows="8">{{{message}}}</textarea>
 
+    {{#canchangestatus}}
     <div class="ai-buttons mt-3">
         <button class="btn btn-success save-ai" data-courseid="{{courseid}}" data-cmid="{{cmid}}" data-userid="{{userid}}">
             {{savelabel}}
@@ -39,4 +40,10 @@
             {{saveapprovelabel}}
         </button>
     </div>
+    {{/canchangestatus}}
+    {{^canchangestatus}}
+    <div class="alert alert-info mt-3">
+        {{#str}} nopermissiontochangestatus, local_assign_ai {{/str}}
+    </div>
+    {{/canchangestatus}}
 </div>

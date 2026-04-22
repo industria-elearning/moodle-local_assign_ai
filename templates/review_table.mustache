@@ -75,19 +75,24 @@
                        {{#isqueued}}aria-disabled="true" tabindex="-1"{{/isqueued}}>
                         {{#str}} qualify, local_assign_ai {{/str}}
                     </a>
-                    <button class="btn btn-success btn-sm text-nowrap view-details js-btn-details {{^canapproveai}}d-none{{/canapproveai}}"
+                    {{#showviewdetails}}
+                    <button class="btn btn-success btn-sm text-nowrap view-details js-btn-details"
                         data-courseid="{{courseid}}"
                         data-cmid="{{cmid}}"
-                        data-userid="{{userid}}" {{#inprogress}}disabled{{/inprogress}}>
+                        data-userid="{{userid}}"
+                        data-showapprovebuttons="{{showapprovebuttons}}" {{#inprogress}}disabled{{/inprogress}}>
                         {{#str}} viewdetails, local_assign_ai {{/str}}
                     </button>
-                    <button class="btn btn-warning btn-sm text-nowrap js-review-ai js-btn-review {{#canapproveai}}d-none{{/canapproveai}}"
+                    {{/showviewdetails}}
+                    {{^canapproveai}}
+                    <button class="btn btn-warning btn-sm text-nowrap js-review-ai js-btn-review"
                         type="button"
                         data-cmid="{{cmid}}"
                         data-userid="{{userid}}"
                         data-pendingid="{{pendingid}}" {{#inprogress}}disabled{{/inprogress}} {{#isqueued}}disabled{{/isqueued}}>
                         {{#str}} review, local_assign_ai {{/str}}
                     </button>
+                    {{/canapproveai}}
                 </div>
             </td>
         </tr>

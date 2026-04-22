@@ -25,10 +25,12 @@
             data-cmid="{{cmid}}" data-all="1" {{^hasinitial}}disabled{{/hasinitial}}>
             {{#str}} reviewall, local_assign_ai {{/str}}
         </button>
+        {{#canchangestatus}}
         <button class="btn btn-success js-approve-all" type="button"
             data-cmid="{{cmid}}" data-courseid="{{courseid}}" {{^haspending}}disabled{{/haspending}}>
             {{#str}} approveall, local_assign_ai {{/str}}
         </button>
+        {{/canchangestatus}}
     </div>
 </div>
 
