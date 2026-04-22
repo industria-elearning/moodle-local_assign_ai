@@ -92,6 +92,7 @@ $string['nosubmissions'] = 'No submissions found to process.';
 $string['notasksfound'] = 'No tasks to review';
 $string['onetaskreviewed'] = '1 task reviewed';
 $string['pluginname'] = 'Assign AI';
+$string['nopermissiontochangestatus'] = 'You do not have permission to save or approve changes to AI reviews. You can only view the details.';
 $string['privacy:metadata:local_assign_ai_pending'] = 'Stores AI-generated feedback pending approval.';
 $string['privacy:metadata:local_assign_ai_pending:approval_token'] = 'Unique token used to track approvals.';
 $string['privacy:metadata:local_assign_ai_pending:assignmentid'] = 'The assignment this AI feedback belongs to.';

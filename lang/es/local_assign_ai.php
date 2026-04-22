@@ -92,6 +92,7 @@ $string['nosubmissions'] = 'No se encontraron entregas para procesar.';
 $string['notasksfound'] = 'No hay tarea para revisar';
 $string['onetaskreviewed'] = 'Se revisó 1 tarea';
 $string['pluginname'] = 'Tareas IA';
+$string['nopermissiontochangestatus'] = 'No tienes permisos para guardar o aprobar cambios en las revisiones de IA. Solo puedes ver los detalles.';
 $string['privacy:metadata:local_assign_ai_pending'] = 'Almacena las retroalimentaciones generadas por IA pendientes de aprobación.';
 $string['privacy:metadata:local_assign_ai_pending:approval_token'] = 'Token único utilizado para el seguimiento de aprobaciones.';
 $string['privacy:metadata:local_assign_ai_pending:assignmentid'] = 'La tarea a la que corresponde esta retroalimentación de IA.';

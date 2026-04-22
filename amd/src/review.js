@@ -36,6 +36,8 @@ export const init = () => {
             const courseid = parseInt(e.currentTarget.dataset.courseid, 10);
             const cmid = parseInt(e.currentTarget.dataset.cmid, 10);
             const userid = parseInt(e.currentTarget.dataset.userid, 10);
+            const showApproveButtons = e.currentTarget.dataset.showapprovebuttons === 'true' ||
+                e.currentTarget.dataset.showapprovebuttons === '1';
 
             Ajax.call([{
                 methodname: 'local_assign_ai_get_details',
@@ -55,7 +57,8 @@ export const init = () => {
                     cmid,
                     userid,
                     savelabel: saveLabel,
-                    saveapprovelabel: saveApproveLabel
+                    saveapprovelabel: saveApproveLabel,
+                    canchangestatus: showApproveButtons
                 });
 
                 // Create the modal.

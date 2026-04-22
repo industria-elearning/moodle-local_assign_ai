@@ -58,6 +58,11 @@ function local_assign_ai_extend_settings_navigation(settings_navigation $nav, co
         return;
     }
 
+    // Verificar permisos antes de agregar enlaces de navegación.
+    if (!has_capability('local/assign_ai:review', $context)) {
+        return;
+    }
+
     // Find the module settings node.
     $modulesettings = $nav->find('modulesettings', navigation_node::TYPE_SETTING);
 
