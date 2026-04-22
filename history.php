@@ -33,7 +33,17 @@ $course = $DB->get_record('course', ['id' => $cm->course], '*', MUST_EXIST);
 $context = context_module::instance($cm->id);
 
 require_login($course, true, $cm);
-require_capability('local/assign_ai:review', $context);
+
+// Verificar permisos ANTES de configurar la página para evitar conflictos de estado.
+if (!has_capability('local/assign_ai:review', $context)) {
+    $courseurl = new moodle_url('/course/view.php', ['id' => $course->id]);
+    throw new moodle_exception(
+        'nopermissions',
+        'error',
+        $courseurl,
+        get_string('local/assign_ai:review', 'local_assign_ai')
+    );
+}
 
 $PAGE->set_url(new moodle_url('/local/assign_ai/history.php', ['id' => $cmid]));
 $PAGE->set_course($course);

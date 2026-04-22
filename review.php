@@ -38,7 +38,16 @@ try {
     // Asegurar login vinculado al módulo para integrar navegación correctamente.
     require_login($course, true, $cm);
 
-    require_capability('local/assign_ai:review', $context);
+    // Verificar permisos ANTES de configurar la página para evitar conflictos de estado.
+    if (!has_capability('local/assign_ai:review', $context)) {
+        $courseurl = new moodle_url('/course/view.php', ['id' => $course->id]);
+        throw new moodle_exception(
+            'nopermissions',
+            'error',
+            $courseurl,
+            get_string('local/assign_ai:review', 'local_assign_ai')
+        );
+    }
 
     // Instantiate the assign object.
     $assign = new assign($context, $cm, $course);
@@ -238,7 +247,19 @@ try {
 
     echo $OUTPUT->render_from_template('local_assign_ai/review_page', $templatecontext);
     echo $OUTPUT->footer();
+} catch (moodle_exception $e) {
+    // Las moodle_exception ya manejan su propio renderizado y redirección.
+    // No intentar mostrar footer aquí para evitar conflictos de estado.
+    throw $e;
 } catch (Exception $e) {
-    \core\notification::error(get_string('unexpectederror', 'local_assign_ai', $e->getMessage()));
-    echo $OUTPUT->footer();
+    // Solo para excepciones inesperadas que NO son de permisos.
+    // Si el header ya se mostró, intentar mostrar footer. Si no, dejar que Moodle maneje el error.
+    if ($PAGE->state >= 2) {
+        // Header ya se mostró, podemos intentar footer.
+        \core\notification::error(get_string('unexpectederror', 'local_assign_ai', $e->getMessage()));
+        echo $OUTPUT->footer();
+    } else {
+        // Página no iniciada, redirigir con error.
+        throw $e;
+    }
 }
