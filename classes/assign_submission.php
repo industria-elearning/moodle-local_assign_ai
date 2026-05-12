@@ -308,6 +308,44 @@ class assign_submission {
     }
 
     /**
+     * Retrieves the file attachments for the current submission encoded as base64.
+     *
+     * Reads files from the assignsubmission_file plugin area and returns them
+     * ready to be included in the AI service payload.
+     *
+     * @return array Array of ['filename', 'mimetype', 'content_base64'] entries.
+     */
+    private function get_submission_files(): array {
+        if (!$this->submission) {
+            return [];
+        }
+
+        $fs = get_file_storage();
+        $context = \context_module::instance($this->assign->get_course_module()->id);
+        $files = $fs->get_area_files(
+            $context->id,
+            'assignsubmission_file',
+            'submission_files',
+            $this->submission->id,
+            'filename',
+            false
+        );
+
+        $result = [];
+        foreach ($files as $file) {
+            if ($file->get_filename() === '.') {
+                continue;
+            }
+            $result[] = [
+                'filename'       => $file->get_filename(),
+                'mimetype'       => $file->get_mimetype(),
+                'content_base64' => base64_encode($file->get_content()),
+            ];
+        }
+        return $result;
+    }
+
+    /**
      * Retrieves the onlinetext content for a given submission.
      *
      * @param stdClass $submission Submission record from {assign_submission}.
@@ -359,6 +397,7 @@ class assign_submission {
             'userid' => $this->user->id,
             'student_name' => fullname($this->user),
             'submission_assign' => self::get_submission_text($this->submission),
+            'submission_files' => $this->get_submission_files(),
             'maximum_grade' => $assignment->grade,
             'prompt' => $config->prompt,
             'lang' => $config->lang,
