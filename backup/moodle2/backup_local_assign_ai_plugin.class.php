@@ -72,8 +72,13 @@ class backup_local_assign_ai_plugin extends backup_local_plugin {
         // Container with assignment-level configuration for local_assign_ai.
         $config = new backup_nested_element('assign_ai_config', ['id'], [
             'assignmentid',
+            'enableai',
             'autograde',
             'graderid',
+            'usedelay',
+            'delayminutes',
+            'prompt',
+            'lang',
             'usermodified',
             'timecreated',
             'timemodified',

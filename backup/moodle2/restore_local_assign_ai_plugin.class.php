@@ -177,8 +177,13 @@ class restore_local_assign_ai_plugin extends restore_local_plugin {
 
                 $record = new stdClass();
                 $record->assignmentid = $newassignid;
+                $record->enableai = $configdata->enableai ?? null;
                 $record->autograde = $configdata->autograde;
                 $record->graderid = $this->map_userid($configdata->graderid ?? null);
+                $record->usedelay = $configdata->usedelay ?? 0;
+                $record->delayminutes = $configdata->delayminutes ?? 0;
+                $record->prompt = $configdata->prompt ?? null;
+                $record->lang = $configdata->lang ?? null;
                 $record->usermodified = $this->map_userid($configdata->usermodified ?? null);
                 $record->timecreated = !empty($configdata->timecreated) ? $configdata->timecreated : time();
                 $record->timemodified = !empty($configdata->timemodified) ? $configdata->timemodified : time();
